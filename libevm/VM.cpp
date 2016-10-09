@@ -732,7 +732,7 @@ void VM::interpretCases()
 		CASE_BEGIN(PUSH1)
 			onOperation();
 			updateIOGas();
-			*++m_sp = *(uint8_t*)(m_code + ++m_pc);
+			*++m_sp = ++m_pc < m_codeSpace.size() ? m_code[m_pc] : 0;
 			m_pc += 1;
 		CASE_END
 
@@ -771,10 +771,25 @@ void VM::interpretCases()
 			onOperation();
 			updateIOGas();
 
-			int i = (int)m_op - (int)Instruction::PUSH1 + 1;
+			// push as many needed bytes as are available in the code
+			// pad with zeros to make up the rest
+			++m_pc;
+			int avail = m_codeSpace.size() - m_pc;
+			int need = (int)m_op - (int)Instruction::PUSH1 + 1;
+			int push = need, pad = 0;
+			if (need > avail)
+			{
+				push = avail;
+				pad = need - push;
+			}
 			*++m_sp = 0;
-			for (++m_pc; i--; ++m_pc)
+			
+			for (; push; ++m_pc, --push)
 				*m_sp = (*m_sp << 8) | m_code[m_pc];
+				
+			for (; pad; ++m_pc, --pad)
+				*m_sp = (*m_sp << 8) | 0;
+
 		}
 		CASE_END
 
