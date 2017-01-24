@@ -158,7 +158,7 @@ struct CallParameters
 	Address receiveAddress;
 	u256 valueTransfer;
 	u256 apparentValue;
-	u256 gas;
+	int64_t gas;
 	bytesConstRef data;
 	bytesRef out;
 	OnOpFunc onOp;

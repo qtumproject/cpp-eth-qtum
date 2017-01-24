@@ -145,9 +145,6 @@ public:
 	/// @returns total gas used in the transaction/operation.
 	/// @warning Only valid after finalise().
 	u256 gasUsed() const;
-	/// @returns total gas used in the transaction/operation, excluding anything refunded.
-	/// @warning Only valid after finalise().
-	u256 gasUsedNoRefunds() const;
 
 	/// Set up the executive for evaluating a bare CREATE (contract-creation) operation.
 	/// @returns false iff go() must be called (and thus a VM execution in required).
@@ -165,9 +162,6 @@ public:
 
 	/// Operation function for providing a simple trace of the VM execution.
 	static OnOpFunc simpleTrace();
-
-	/// Operation function for providing a simple trace of the VM execution.
-	static OnOpFunc standardTrace(std::ostream& o_output);
 
 	/// @returns gas remaining after the transaction/operation. Valid after the transaction has been executed.
 	u256 gas() const { return m_gas; }
@@ -194,8 +188,8 @@ private:
 	unsigned m_depth = 0;				///< The context's call-depth.
 	TransactionException m_excepted = TransactionException::None;	///< Details if the VM's execution resulted in an exception.
 	bigint m_baseGasRequired;				///< The base amount of gas requried for executing this transactions.
-	u256 m_gas = 0;						///< The gas for EVM code execution. Initial amount before go() execution, final amount after go() execution.
-	u256 m_refunded = 0;				///< The amount of gas refunded.
+	int64_t m_gas = 0;					///< The gas for EVM code execution. Initial amount before go() execution, final amount after go() execution.
+	int64_t m_refunded = 0;				///< The amount of gas refunded.
 
 	Transaction m_t;					///< The original transaction. Set by setup().
 	LogEntries m_logs;					///< The log entries created by this transaction. Set by finalize().

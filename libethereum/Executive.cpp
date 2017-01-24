@@ -170,11 +170,6 @@ u256 Executive::gasUsed() const
 	return m_t.gas() - m_gas;
 }
 
-u256 Executive::gasUsedNoRefunds() const
-{
-	return m_t.gas() - m_gas + m_refunded;
-}
-
 void Executive::accrueSubState(SubState& _parentContext)
 {
 	if (m_ext)
