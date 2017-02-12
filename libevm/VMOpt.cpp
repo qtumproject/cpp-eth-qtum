@@ -49,11 +49,11 @@ void VM::initMetrics()
 	done = true;
 }
 
-void VM::copyCode(int _extraBytes)
+// Copy code so that it can be safely modified and extend code by
+// _extraBytes zero bytes to allow reading virtual data at the end
+// of the code without bounds checks.
+void VM::copyCode(size_t _extraBytes)
 {
-	// Copy code so that it can be safely modified and extend code by
-	// _extraBytes zero bytes to allow reading virtual data at the end
-	// of the code without bounds checks.
 	auto extendedSize = m_ext->code.size() + _extraBytes;
 	m_codeSpace.reserve(extendedSize);
 	m_codeSpace = m_ext->code;
@@ -115,6 +115,7 @@ void VM::optimize()
 		}
 		else if (op == Instruction::BEGINDATA)
 		{
+			pc = nBytes;
 			break;
 		}
 #endif

@@ -33,8 +33,12 @@ namespace eth
 //
 // EVM_TRACE              - provides various levels of tracing
 
-#if true && defined(__GNUG__)
-	#define EVM_JUMP_DISPATCH
+#if true
+	#ifdef __GNUC__
+		#define EVM_JUMP_DISPATCH
+	#else
+		#error "address of label extension avaiable only on Gnu"s
+	#endif
 #else
 	#define EVM_SWITCH_DISPATCH
 #endif

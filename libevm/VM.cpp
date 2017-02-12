@@ -888,7 +888,7 @@ void VM::interpretCases()
 			ON_OP();
 			updateIOGas();
 			{
-				*++m_rp = m_pc++;
+				*m_rp++ = m_pc++;
 				m_pc = decodeJumpDest(m_code, m_pc);
 			}
 		CASE_END
@@ -897,9 +897,8 @@ void VM::interpretCases()
 			ON_OP();
 			updateIOGas();
 			{
-				*++m_rp = m_pc;
-				m_pc = 
-				jumpvDest(m_code, m_pc, m_sp);
+				*m_rp++ = m_pc;
+				m_pc = decodeJumpvDest(m_code, m_pc, m_sp);
 			}
 		CASE_END
 
@@ -907,7 +906,7 @@ void VM::interpretCases()
 			ON_OP();
 			updateIOGas();
 			
-			m_pc = *m_rp--;
+			m_pc = *--m_rp;
 			++m_pc;
 		CASE_END
 #else

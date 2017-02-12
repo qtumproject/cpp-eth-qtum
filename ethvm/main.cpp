@@ -119,6 +119,7 @@ int main(int argc, char** argv)
 	setDefaultOrCLocale();
 	string inputFile;
 	Mode mode = Mode::Statistics;
+	bool validate = false;
 	VMKind vmKind = VMKind::Interpreter;
 	State state(0);
 	Address sender = Address(69);
@@ -210,10 +211,14 @@ int main(int argc, char** argv)
 			mode = Mode::Trace;
 		else if (arg == "test")
 			mode = Mode::Test;
+		else if (arg == "validate") 
+			mode = Mode::Test;
 		else if (arg == "--input" && i + 1 < argc)
 			data = fromHex(argv[++i]);
 		else if (arg == "--code" && i + 1 < argc)
 			code = fromHex(argv[++i]);
+		else if (arg == "--validate" && i + 1 < argc)
+			validate = true;
 		else if (inputFile.empty())
 			inputFile = arg;  // Assign input file name only once.
 		else
@@ -224,7 +229,6 @@ int main(int argc, char** argv)
 	}
 
 	VMFactory::setKind(vmKind);
-
 
 	// Read code from input file.
 	if (!inputFile.empty())
@@ -246,6 +250,12 @@ int main(int argc, char** argv)
 			code = fromHex(strCode, WhenError::Throw);
 		}
 		catch (BadHexCharacter const&) {}  // Ignore decoding errors.
+	}
+	
+	// Validate subroutines before execution
+	if (validate)
+	{
+	
 	}
 
 	Transaction t;

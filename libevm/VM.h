@@ -75,7 +75,7 @@ private:
 	static std::array<InstructionMetric, 256> c_metrics;
 	static void initMetrics();
 	static u256 exp256(u256 _base, u256 _exponent);
-	void copyCode(int);
+	void copyCode(size_t extra_bytes);
 	const void* const* c_jumpTable = 0;
 	bool m_caseInit = false;
 	
@@ -101,8 +101,7 @@ private:
 	
 #if EVM_JUMPS_AND_SUBS
 	// space for return stack and pointer to data
-	uint64_t m_returnSpace[1025];
-	uint64_t* m_return = m_returnSpace + 1;
+	uint64_t m_return[1024];
 #endif
 
 	// constant pool
@@ -113,7 +112,7 @@ private:
 	uint64_t    m_pc = 0;               // program counter
 	u256*       m_sp = m_stack - 1;     // stack pointer
 #if EVM_JUMPS_AND_SUBS
-	uint64_t*   m_rp = m_return - 1;    // return pointer
+	uint64_t*   m_rp = m_return;        // return pointer
 #endif
 
 	// metering and memory state

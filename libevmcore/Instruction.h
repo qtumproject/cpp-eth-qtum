@@ -58,6 +58,11 @@ enum class Instruction: uint8_t
 	XOR,                ///< bitwise XOR operation
 	NOT,                ///< bitwise NOT opertation
 	BYTE,               ///< retrieve single byte from word
+	SHL,                ///< bitwise SHL operation
+	SHR,                ///< bitwise SHR operation
+	SAR,                ///< bitwise SAR operation
+	ROL,                ///< bitwise ROL operation
+	ROR,                ///< bitwise ROR operation
 
 	SHA3 = 0x20,        ///< compute SHA3-256 hash
 
@@ -188,6 +193,8 @@ enum class Instruction: uint8_t
 	CALLCODE,           ///< message-call with another account's code only
 	RETURN,             ///< halt execution returning output data
 	DELEGATECALL,       ///< like CALLCODE but keeps caller's value and sender
+
+	INVALID = 0xfe,     ///< invalid instruction for expressing runtime errors (e.g., division-by-zero)
 	SUICIDE = 0xff      ///< halt execution and register account for later deletion
 };
 
@@ -278,4 +285,3 @@ std::string disassemble(bytes const& _mem);
 
 }
 }
-	
