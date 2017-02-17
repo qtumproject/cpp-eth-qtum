@@ -119,6 +119,9 @@ void BlockQueue::verifierBody()
 			// has to be this order as that's how invariants() assumes.
 			WriteGuard l2(m_lock);
 			unique_lock<Mutex> l(m_verification);
+			bool known = m_bc->isKnown(work.hash);
+			cwarn << "BLOCK QUEUE Bad block: " << _ex.what();
+			cwarn << "known: " << known;
 			m_readySet.erase(work.hash);
 			m_knownBad.insert(work.hash);
 			if (!m_verifying.remove(work.hash))
