@@ -27,10 +27,10 @@ using namespace dev::eth;
 
 void VM::copyDataToMemory(bytesConstRef _data, u256*& _sp)
 {
-	auto offset = static_cast<size_t>(*_sp--);
-	s512 bigIndex = *_sp--;
+	auto offset = static_cast<size_t>(_sp[0]);
+	s512 bigIndex = _sp[3];
 	auto index = static_cast<size_t>(bigIndex);
-	auto size = static_cast<size_t>(*_sp--);
+	auto size = static_cast<size_t>(_sp[2]);
 
 	size_t sizeToBeCopied = bigIndex + size > _data.size() ? _data.size() < bigIndex ? 0 : _data.size() - index : size;
 
@@ -45,16 +45,22 @@ void VM::copyDataToMemory(bytesConstRef _data, u256*& _sp)
 
 void VM::throwOutOfGas()
 {
+	if (m_onFail)
+		(this->*m_onFail)();
 	BOOST_THROW_EXCEPTION(OutOfGas());
 }
 
 void VM::throwBadInstruction()
 {
+	if (m_onFail)
+		(this->*m_onFail)();
 	BOOST_THROW_EXCEPTION(BadInstruction());
 }
 
 void VM::throwBadJumpDestination()
 {
+	if (m_onFail)
+		(this->*m_onFail)();
 	BOOST_THROW_EXCEPTION(BadJumpDestination());
 }
 
@@ -99,15 +105,14 @@ int64_t VM::verifyJumpDest(u256 const& _dest, bool _throw)
 void VM::caseCreate()
 {
 	m_bounce = &VM::interpretCases;
-	m_newMemSize = memNeed(*(m_sp - 1), *(m_sp - 2));
-	m_runGas = toUint64(m_schedule->createGas);
-	updateMem();
+	m_runGas = toInt63(m_schedule->createGas);
+	updateMem(memNeed(m_SP[1], m_SP[2]));
 	ON_OP();
 	updateIOGas();
 
-	auto const& endowment = *m_sp--;
-	uint64_t initOff = (uint64_t)*m_sp--;
-	uint64_t initSize = (uint64_t)*m_sp--;
+	auto const& endowment = m_SP[0];
+	uint64_t initOff = (uint64_t)m_SP[1];
+	uint64_t initSize = (uint64_t)m_SP[2];
 
 	if (m_ext->balance(m_ext->myAddress) >= endowment && m_ext->depth < 1024)
 	{
@@ -116,13 +121,13 @@ void VM::caseCreate()
 		if (!m_schedule->staticCallDepthLimit())
 			createGas -= createGas / 64;
 		u256 gas = createGas;
-		*++m_sp = (u160)m_ext->create(endowment, gas, bytesConstRef(m_mem.data() + initOff, initSize), m_onOp);
+		m_SP[1] = (u160)m_ext->create(endowment, gas, bytesConstRef(m_mem.data() + initOff, initSize), m_onOp);
 		*io_gas -= (createGas - gas);
 		m_io_gas = uint64_t(*io_gas);
 	}
 	else
-		*++m_sp = 0;
-	++m_pc;
+		m_SP[1] = 0;
+	++m_PC;
 }
 
 void VM::caseCall()
@@ -135,83 +140,82 @@ void VM::caseCall()
 		if (boost::optional<owning_bytes_ref> r = m_ext->call(*callParams))
 		{
 			r->copyTo(output);
-			*++m_sp = 1;
+			m_SPP[0] = 1;
 		}
 		else
-			*++m_sp = 0;
+			m_SPP[0] = 0;
 	}
 	else
-		*++m_sp = 0;
+		m_SPP[0] = 0;
 	m_io_gas += uint64_t(callParams->gas);
-	++m_pc;
+	++m_PC;
 }
 
 bool VM::caseCallSetup(CallParameters *callParams, bytesRef& o_output)
 {
-	m_runGas = toUint64(m_schedule->callGas);
+	m_runGas = toInt63(m_schedule->callGas);
 
-	if (m_op == Instruction::CALL && !m_ext->exists(asAddress(*(m_sp - 1))))
-		if (*(m_sp - 2) > 0 || m_schedule->zeroValueTransferChargesNewAccountGas())
-			m_runGas += toUint64(m_schedule->callNewAccountGas);
+	if (m_OP == Instruction::CALL && !m_ext->exists(asAddress(m_SP[1])))
+		if (m_SP[2] > 0 || m_schedule->zeroValueTransferChargesNewAccountGas())
+			m_runGas += toInt63(m_schedule->callNewAccountGas);
 
-	if (m_op != Instruction::DELEGATECALL && *(m_sp - 2) > 0)
-		m_runGas += toUint64(m_schedule->callValueTransferGas);
+	if (m_OP != Instruction::DELEGATECALL && m_SP[2] > 0)
+		m_runGas += toInt63(m_schedule->callValueTransferGas);
 
-	size_t sizesOffset = m_op == Instruction::DELEGATECALL ? 3 : 4;
-	u256 inputOffset = m_stack[(1 + m_sp - m_stack) - sizesOffset];
-	u256 inputSize = m_stack[(1 + m_sp - m_stack) - sizesOffset - 1];
-	u256 outputOffset = m_stack[(1 + m_sp - m_stack) - sizesOffset - 2];
-	u256 outputSize = m_stack[(1 + m_sp - m_stack) - sizesOffset - 3];
+	size_t sizesOffset = m_OP == Instruction::DELEGATECALL ? 3 : 4;
+	u256 inputOffset  = m_SP[sizesOffset];
+	u256 inputSize    = m_SP[sizesOffset + 1];
+	u256 outputOffset = m_SP[sizesOffset + 2];
+	u256 outputSize   = m_SP[sizesOffset + 3];
 	uint64_t inputMemNeed = memNeed(inputOffset, inputSize);
 	uint64_t outputMemNeed = memNeed(outputOffset, outputSize);
 
 	m_newMemSize = std::max(inputMemNeed, outputMemNeed);
-	updateMem();
+	updateMem(m_newMemSize);
 	updateIOGas();
 
 	// "Static" costs already applied. Calculate call gas.
 	if (m_schedule->staticCallDepthLimit())
 		// With static call depth limit we just charge the provided gas amount.
-		callParams->gas = *m_sp;
+		callParams->gas = m_SP[1];
 	else
 	{
 		// Apply "all but one 64th" rule.
 		u256 maxAllowedCallGas = m_io_gas - m_io_gas / 64;
-		callParams->gas = std::min(*m_sp, maxAllowedCallGas);
+		callParams->gas = std::min(m_SP[1], maxAllowedCallGas);
 	}
 
-	m_runGas = toUint64(callParams->gas);
+	m_runGas = toInt63(callParams->gas);
 	ON_OP();
 	updateIOGas();
 
-	if (m_op != Instruction::DELEGATECALL && *(m_sp - 2) > 0)
+	if (m_OP != Instruction::DELEGATECALL && m_SP[2] > 0)
 		callParams->gas += m_schedule->callStipend;
-	--m_sp;
 
-	callParams->codeAddress = asAddress(*m_sp);
-	--m_sp;
+	callParams->codeAddress = asAddress(m_SP[2]);
 
-	if (m_op == Instruction::DELEGATECALL)
+	unsigned inOutOffset = 0;
+	if (m_OP == Instruction::DELEGATECALL)
 	{
 		callParams->apparentValue = m_ext->value;
 		callParams->valueTransfer = 0;
 	}
 	else
 	{
-		callParams->apparentValue = callParams->valueTransfer = *m_sp;
-		--m_sp;
+		callParams->apparentValue = callParams->valueTransfer = m_SP[3];
+		inOutOffset = 1;
 	}
 
-	uint64_t inOff = (uint64_t)*m_sp--;
-	uint64_t inSize = (uint64_t)*m_sp--;
-	uint64_t outOff = (uint64_t)*m_sp--;
-	uint64_t outSize = (uint64_t)*m_sp--;
+	uint64_t inOff = (uint64_t)m_SP[inOutOffset + 3];
+	uint64_t inSize = (uint64_t)m_SP[inOutOffset + 4];
+	uint64_t outOff = (uint64_t)m_SP[inOutOffset + 5];
+	uint64_t outSize = (uint64_t)m_SP[inOutOffset + 6];
 
 	if (m_ext->balance(m_ext->myAddress) >= callParams->valueTransfer && m_ext->depth < 1024)
 	{
 		callParams->onOp = m_onOp;
-		callParams->senderAddress = m_op == Instruction::DELEGATECALL ? m_ext->caller : m_ext->myAddress;
-		callParams->receiveAddress = m_op == Instruction::CALL ? callParams->codeAddress : m_ext->myAddress;
+		callParams->senderAddress = m_OP == Instruction::DELEGATECALL ? m_ext->caller : m_ext->myAddress;
+		callParams->receiveAddress = m_OP == Instruction::CALL ? callParams->codeAddress : m_ext->myAddress;
 		callParams->data = bytesConstRef(m_mem.data() + inOff, inSize);
 		o_output = bytesRef(m_mem.data() + outOff, outSize);
 		return true;

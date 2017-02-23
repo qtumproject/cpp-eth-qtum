@@ -55,10 +55,9 @@ void VM::copyCode(int _extraBytes)
 	// _extraBytes zero bytes to allow reading virtual data at the end
 	// of the code without bounds checks.
 	auto extendedSize = m_ext->code.size() + _extraBytes;
-	m_codeSpace.reserve(extendedSize);
-	m_codeSpace = m_ext->code;
-	m_codeSpace.resize(extendedSize);
-	m_code = m_codeSpace.data();
+	m_code.reserve(extendedSize);
+	m_code = m_ext->code;
+	m_code.resize(extendedSize);
 }
 
 void VM::optimize()
