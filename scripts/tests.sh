@@ -35,12 +35,12 @@ if [[ "$TESTS" == "On" ]]; then
 
     # Clone the end-to-end test repo, and point environment variable at it.
     cd ../..
-    git clone https://github.com/ethereum/tests.git
+    git clone --depth 1 https://github.com/ethereum/tests.git
     export ETHEREUM_TEST_PATH=$(pwd)/tests/
 
     # Run the tests for the Interpreter
     cd cpp-ethereum/build
-    $BUILD_ROOT/test/testeth -t "ClientBase,EthereumPeerSuite,GasPricer,BasicTests,StateTestsGeneral,StateUnitTests,libethereum,TransactionQueueSuite"
+    $BUILD_ROOT/test/testeth -t devcrypto
 
     # Run the tests for the JIT (but only for Ubuntu, not macOS)
     # The whole automation process is too slow for macOS, and we don't have
