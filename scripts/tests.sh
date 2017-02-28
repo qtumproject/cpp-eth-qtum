@@ -40,7 +40,7 @@ if [[ "$TESTS" == "On" ]]; then
 
     # Run the tests for the Interpreter
     cd cpp-ethereum/build
-    $BUILD_ROOT/test/testeth -t "*BlockChain*"
+    $BUILD_ROOT/test/testeth -t "ClientBase,EthereumPeerSuite,GasPricer,BasicTests,StateTestsGeneral,StateUnitTests,libethereum,TransactionQueueSuite,TransactionTests,OverlayDBTests,devcrypto,memDB,TrieTests,KeyStore,AES,p2p,p2pPeer,peerTypes,rlpx,eip8,p2pCapability,net,netTypes,RlpTests,RangeMaskTest,Base36Tests,CommonJSTests,CoreLibTests,FixedHashTests,ClientTests,AccountHolderTest,whisper,shhrpc,whisperDB,whisperMessage,bloomFilter,VMTests,ExtDepBoost"
 
     # Run the tests for the JIT (but only for Ubuntu, not macOS)
     # The whole automation process is too slow for macOS, and we don't have
