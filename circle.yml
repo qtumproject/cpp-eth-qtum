@@ -1,0 +1,20 @@
+version: 2
+executorType: docker
+containerInfo:
+  - image: chfast/dev-cpp-gcc
+stages:
+  checkout:
+    workDir: ~/cpp-ethereum
+    steps:
+      - type: checkout
+      - type: shell
+        name: "Check cmake"
+        command: cmake --version
+  build:
+    workDir: ~/build
+      - type: shell
+        name: "Configure"
+        command: cmake ../cpp-ethereum
+      - type: shell
+        name: "Build"
+        command: make -j8
