@@ -51,7 +51,7 @@ include(deps/boost.cmake)
 include(deps/jsoncpp.cmake)
 include(deps/jsonrpc.cmake)
 include(deps/cryptopp.cmake)
-include(deps/snark.cmake)
+include(ProjectSnark)
 
 configure_project(CPUID CURL EVMJIT FATDB MINIUPNPC ROCKSDB PARANOID TESTS VMTRACE)
 
