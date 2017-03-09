@@ -11,6 +11,7 @@ endmacro()
 
 add_subdirectory(libtesteth)
 add_subdirectory(fuzzTesting)
+add_subdirectory(libethashseal)
 add_subdirectory(libethcore)
 add_subdirectory(libethereum)
 add_subdirectory(libtestutils)
