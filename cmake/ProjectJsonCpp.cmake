@@ -24,6 +24,7 @@ ExternalProject_Add(jsoncpp
                ${_only_release_configuration}
                -DJSONCPP_WITH_TESTS=Off
                -DJSONCPP_WITH_PKGCONFIG_SUPPORT=Off
+               -DCMAKE_POSITION_INDEPENDENT_CODE=ON### qtum
     LOG_CONFIGURE 1
     BUILD_COMMAND ""
     ${_overwrite_install_command}
