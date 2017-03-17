@@ -305,7 +305,8 @@ public:
 	/// Revert all recent changes up to the given @p _savepoint savepoint.
 	void rollback(size_t _savepoint);
 
-private:
+// private:
+protected: // qtum
 	/// Turns all "touched" empty accounts into non-alive accounts.
 	void removeEmptyAccounts();
 
