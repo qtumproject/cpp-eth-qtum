@@ -92,8 +92,8 @@ Darwin)
     brew -v > /dev/null 2>&1 || { echo >&2 "ERROR - cpp-ethereum requires a Homebrew install.  See http://brew.sh."; exit 1; }
 
     # And finally install all the external dependencies.
+    brew reinstall qtumproject/homebrew-qtum/leveldb -s 
     brew install \
-    	qtumproject/homebrew-qtum/leveldb -s \
         libmicrohttpd \
         miniupnpc
     ;;
