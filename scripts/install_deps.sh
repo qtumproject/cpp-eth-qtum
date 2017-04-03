@@ -93,10 +93,9 @@ Darwin)
 
     # And finally install all the external dependencies.
     brew install \
-        leveldb \
+    	qtumproject/homebrew-qtum/leveldb -s \
         libmicrohttpd \
         miniupnpc
-
     ;;
 
 #------------------------------------------------------------------------------

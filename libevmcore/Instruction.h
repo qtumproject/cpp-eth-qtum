@@ -26,6 +26,10 @@
 #include <libdevcore/Assertions.h>
 #include "Exceptions.h"
 
+#ifdef MSIZE
+#undef MSIZE
+#endif
+
 namespace dev
 {
 namespace eth
