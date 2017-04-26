@@ -133,7 +133,8 @@ h160 ExtVM::create(u256 _endowment, u256& io_gas, bytesConstRef _code, OnOpFunc 
 void ExtVM::suicide(Address _a)
 {
 	// TODO: Why transfer is no used here?
-	m_s.addBalance(_a, m_s.balance(myAddress));
-	m_s.subBalance(myAddress, m_s.balance(myAddress));
+	// m_s.addBalance(_a, m_s.balance(myAddress));
+	// m_s.subBalance(myAddress, m_s.balance(myAddress));
+	m_s.transferBalance(myAddress, _a, m_s.balance(myAddress));
 	ExtVMFace::suicide(_a);
 }
