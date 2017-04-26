@@ -237,7 +237,7 @@ public:
 	 * @param _to Account to which @a _value will be added.
 	 * @param _value Amount to be transferred.
 	 */
-	void transferBalance(Address const& _from, Address const& _to, u256 const& _value) { subBalance(_from, _value); addBalance(_to, _value); }
+	virtual void transferBalance(Address const& _from, Address const& _to, u256 const& _value) { subBalance(_from, _value); addBalance(_to, _value); }
 
 	/// Get the root of the storage of an account.
 	h256 storageRoot(Address const& _contract) const;
@@ -256,7 +256,7 @@ public:
 	void setNewCode(Address const& _address, bytes&& _code);
 
 	/// Delete an account (used for processing suicides).
-	void kill(Address _a);
+	virtual void kill(Address _a);
 
 	/// Get the storage of an account.
 	/// @note This is expensive. Don't use it unless you need to.
