@@ -22,6 +22,9 @@
 #include "CommonData.h"
 #include <random>
 
+#include <libdevcore/SHA3.h>
+#include <boost/algorithm/string.hpp>
+
 #if defined(_MSC_VER)
 #pragma warning(push)
 #pragma warning(disable:4724) // potential mod by 0, line 78 of boost/random/uniform_int_distribution.hpp (boost 1.55)
@@ -144,4 +147,35 @@ std::string dev::toString(string32 const& _s)
 	for (unsigned i = 0; i < 32 && _s[i]; ++i)
 		ret.push_back(_s[i]);
 	return ret;
+}
+
+bool dev::passesAddressChecksum(string const& _str, bool _strict)
+{
+	string s = _str.substr(0, 2) == "0x" ? _str.substr(2) : _str;
+
+	if (s.length() != 40)
+		return false;
+
+	if (!_strict && (
+		_str.find_first_of("abcdef") == string::npos ||
+		_str.find_first_of("ABCDEF") == string::npos
+	))
+		return true;
+
+	h256 hash = keccak256(boost::algorithm::to_lower_copy(s, std::locale::classic()));
+	for (size_t i = 0; i < 40; ++i)
+	{
+		char addressCharacter = s[i];
+		bool lowerCase;
+		if ('a' <= addressCharacter && addressCharacter <= 'f')
+			lowerCase = true;
+		else if ('A' <= addressCharacter && addressCharacter <= 'F')
+			lowerCase = false;
+		else
+			continue;
+		unsigned nibble = (unsigned(hash[i / 2]) >> (4 * (1 - (i % 2)))) & 0xf;
+		if ((nibble >= 8) == lowerCase)
+			return false;
+	}
+	return true;
 }

@@ -198,6 +198,14 @@ static inline int hash(uint8_t* out, size_t outlen,
 	}                                                             \
 	return hash(out, outlen, in, inlen, 200 - (bits / 4), 0x01);  \
   }
+#define defkeccak(bits)                                             \
+  int keccak##bits(uint8_t* out, size_t outlen,                    \
+				  const uint8_t* in, size_t inlen) {              \
+	if (outlen > (bits/8)) {                                      \
+	  return -1;                                                  \
+	}                                                             \
+	return hash(out, outlen, in, inlen, 200 - (bits / 4), 0x01);  \
+  }
 
 /*** FIPS202 SHAKE VOFs ***/
 defshake(128)
@@ -209,6 +217,12 @@ defsha3(256)
 defsha3(384)
 defsha3(512)
 
+/*** KECCAK FOFs ***/
+defkeccak(224)
+defkeccak(256)
+defkeccak(384)
+defkeccak(512)
+
 }
 
 bool sha3(bytesConstRef _input, bytesRef o_output)
@@ -217,6 +231,16 @@ bool sha3(bytesConstRef _input, bytesRef o_output)
 	if (o_output.size() != 32)
 		return false;
 	keccak::sha3_256(o_output.data(), 32, _input.data(), _input.size());
+//	keccak::keccak(ret.data(), 32, (uint64_t const*)_input.data(), _input.size());
+	return true;
+}
+
+bool keccak256(bytesConstRef _input, bytesRef o_output)
+{
+	// FIXME: What with unaligned memory?
+	if (o_output.size() != 32)
+		return false;
+	keccak::keccak256(o_output.data(), 32, _input.data(), _input.size());
 //	keccak::keccak(ret.data(), 32, (uint64_t const*)_input.data(), _input.size());
 	return true;
 }
