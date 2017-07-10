@@ -1,48 +1,47 @@
 include(ExternalProject)
 include(GNUInstallDirs)
 
-set(BOOST_CXXFLAGS "")
 if (WIN32)
-    set(BOOST_BOOTSTRAP_COMMAND bootstrap.bat)
-    set(BOOST_BUILD_TOOL b2.exe)
-    set(BOOST_LIBRARY_SUFFIX -vc140-mt-1_63.lib)
+    set(BOOST_INCLUDE_DIR ${CMAKE_FIND_ROOT_PATH}/include)
+    set(BOOST_LIB_DIR ${CMAKE_FIND_ROOT_PATH}/lib)
 else()
+    set(BOOST_CXXFLAGS "")
     set(BOOST_BOOTSTRAP_COMMAND ./bootstrap.sh)
     set(BOOST_BUILD_TOOL ./b2)
     set(BOOST_LIBRARY_SUFFIX .a)
     if (${BUILD_SHARED_LIBS})
-        set(BOOST_CXXFLAGS "cxxflags=-fPIC")
+    	set(BOOST_CXXFLAGS "cxxflags=-fPIC")
     endif()
+
+    ExternalProject_Add(boost
+        PREFIX ${CMAKE_SOURCE_DIR}/deps
+        DOWNLOAD_NO_PROGRESS 1
+        URL https://github.com/ethereum/cpp-dependencies/releases/download/cache/boost_1_63_0.tar.gz
+        URL_HASH SHA256=fe34a4e119798e10b8cc9e565b3b0284e9fd3977ec8a1b19586ad1dec397088b
+        BUILD_IN_SOURCE 1
+        CONFIGURE_COMMAND ${BOOST_BOOTSTRAP_COMMAND}
+        LOG_CONFIGURE 1
+        BUILD_COMMAND ${BOOST_BUILD_TOOL} stage
+            ${BOOST_CXXFLAGS}
+            threading=multi
+            link=static
+            variant=release
+            address-model=64
+            --with-chrono
+            --with-date_time
+            --with-filesystem
+            --with-random
+            --with-regex
+            --with-test
+            --with-thread
+        LOG_BUILD 1
+        INSTALL_COMMAND ""
+    )
+
+    ExternalProject_Get_Property(boost SOURCE_DIR)
+    set(BOOST_INCLUDE_DIR ${SOURCE_DIR})
+    set(BOOST_LIB_DIR ${SOURCE_DIR}/stage/lib)
 endif()
-
-ExternalProject_Add(boost
-    PREFIX ${CMAKE_SOURCE_DIR}/deps
-    DOWNLOAD_NO_PROGRESS 1
-    URL https://github.com/ethereum/cpp-dependencies/releases/download/cache/boost_1_63_0.tar.gz
-    URL_HASH SHA256=fe34a4e119798e10b8cc9e565b3b0284e9fd3977ec8a1b19586ad1dec397088b
-    BUILD_IN_SOURCE 1
-    CONFIGURE_COMMAND ${BOOST_BOOTSTRAP_COMMAND}
-    LOG_CONFIGURE 1
-    BUILD_COMMAND ${BOOST_BUILD_TOOL} stage
-        ${BOOST_CXXFLAGS}
-        threading=multi
-        link=static
-        variant=release
-        address-model=64
-        --with-chrono
-        --with-date_time
-        --with-filesystem
-        --with-random
-        --with-regex
-        --with-test
-        --with-thread
-    LOG_BUILD 1
-    INSTALL_COMMAND ""
-)
-
-ExternalProject_Get_Property(boost SOURCE_DIR)
-set(BOOST_INCLUDE_DIR ${SOURCE_DIR})
-set(BOOST_LIB_DIR ${SOURCE_DIR}/stage/lib)
 unset(BUILD_DIR)
 
 add_library(Boost::Chrono STATIC IMPORTED)
