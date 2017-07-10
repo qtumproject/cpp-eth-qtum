@@ -307,7 +307,7 @@ bool Executive::call(CallParameters const& _p, u256 const& _gasPrice, Address co
 
 	//////////////////////////////////////////////// // qtum
 	if(!m_s.addressInUse(_p.receiveAddress))
-		m_sealEngine.deleteAddresses.push_back(_p.receiveAddress);
+		m_sealEngine.deleteAddresses.insert(_p.receiveAddress);
 	////////////////////////////////////////////////
 
 	// Transfer ether.

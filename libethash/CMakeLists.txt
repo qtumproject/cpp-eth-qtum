@@ -6,7 +6,7 @@ endif ()
 
 set(CMAKE_BUILD_TYPE Release)
 
-if (NOT MSVC)
+if (NOT WIN32)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
 endif()
 
@@ -19,7 +19,7 @@ set(FILES 	util.h
           	fnv.h
           	data_sizes.h)
 
-if (MSVC)
+if (WIN32)
 	list(APPEND FILES util_win32.c io_win32.c mmap_win32.c)
 else()
 	list(APPEND FILES io_posix.c)

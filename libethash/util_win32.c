@@ -20,7 +20,6 @@
  */
 #include <stdarg.h>
 #include <stdio.h>
-#include "util.h"
 
 
 // foward declare without all of Windows.h
