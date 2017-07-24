@@ -89,7 +89,7 @@ public:
 
 	EVMSchedule& getQtumSchedule() const { return qtumSchedule; }
 
-	mutable std::vector<Address> deleteAddresses;
+	mutable std::set<Address> deleteAddresses;
 //////////////////////////////////////////////////////////////
 
 protected:
