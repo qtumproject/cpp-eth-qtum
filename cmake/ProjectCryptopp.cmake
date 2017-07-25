@@ -153,8 +153,16 @@ ExternalProject_Add(cryptopp
         -DCMAKE_BUILD_TYPE=Release
         # Build static lib but suitable to be included in a shared lib.
         -DCMAKE_POSITION_INDEPENDENT_CODE=${BUILD_SHARED_LIBS}
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON### qtum
         -DBUILD_SHARED=Off
         -DBUILD_TESTING=Off
+        -DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
+        -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+        -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+        -DCMAKE_RC_COMPILER=${CMAKE_RC_COMPILER}
+        -DCMAKE_FIND_ROOT_PATH=${CMAKE_FIND_ROOT_PATH}
+        -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=${CMAKE_FIND_ROOT_PATH_MODE_LIBRARY}
+        -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=${CMAKE_FIND_ROOT_PATH_MODE_INCLUDE}
     LOG_CONFIGURE 1
     # Overwrite build and install commands to force Release build on MSVC.
     BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --config Release
