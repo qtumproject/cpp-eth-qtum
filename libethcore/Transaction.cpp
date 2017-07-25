@@ -113,7 +113,7 @@ Address const& TransactionBase::sender() const
 	{
 		auto p = recover(m_vrs, sha3(WithoutSignature));
 		if (!p)
-            return m_sender;
+			BOOST_THROW_EXCEPTION(InvalidSignature());
 		m_sender = right160(dev::sha3(bytesConstRef(p.data(), sizeof(p))));
 	}
 	return m_sender;
