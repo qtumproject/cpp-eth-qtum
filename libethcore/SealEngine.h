@@ -84,7 +84,13 @@ public:
 	virtual bigint costOfPrecompiled(Address const& _a, bytesConstRef _in, u256 const&) const { return m_params.precompiled.at(_a).cost(_in); }
 	virtual std::pair<bool, bytes> executePrecompiled(Address const& _a, bytesConstRef _in, u256 const&) const { return m_params.precompiled.at(_a).execute(_in); }
 
-	mutable std::set<Address> deleteAddresses; // qtum
+////////////////////////////////////////////////////////////// // qtum
+	void setQtumSchedule(EVMSchedule _qtumSchedule) const { qtumSchedule = _qtumSchedule; }
+
+	EVMSchedule& getQtumSchedule() const { return qtumSchedule; }
+
+	mutable std::set<Address> deleteAddresses;
+//////////////////////////////////////////////////////////////
 
 protected:
 	virtual bool onOptionChanging(std::string const&, bytes const&) { return true; }
@@ -92,6 +98,8 @@ protected:
 private:
 	mutable Mutex x_options;
 	std::unordered_map<std::string, bytes> m_options;
+
+	mutable EVMSchedule qtumSchedule; // qtum
 
 	ChainOperationParams m_params;
 };

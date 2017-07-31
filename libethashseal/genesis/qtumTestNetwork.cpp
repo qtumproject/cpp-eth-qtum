@@ -16,17 +16,17 @@
 */
 #include "../GenesisInfo.h"
 
-static dev::h256 const c_genesisStateRootQtumMainNetwork("2ebd2f054ed409f4bc77921ce642517eb574470c01772dc26658d016a4ccc825");
-static std::string const c_genesisInfoQtumMainNetwork = std::string() +
+static dev::h256 const c_genesisStateRootQtumTestNetwork("2ebd2f054ed409f4bc77921ce642517eb574470c01772dc26658d016a4ccc825");
+static std::string const c_genesisInfoQtumTestNetwork = std::string() +
 R"E(
 {
 	"sealEngine": "Ethash",
 	"params": {
 		"accountStartNonce": "0x00",
 		"homsteadForkBlock": "0x00",
-		"daoHardforkBlock": "0xfffffffffffffff",
-		"EIP150ForkBlock": "0x00",
-		"EIP158ForkBlock": "0x00",
+		"daoHardforkBlock": "0xffffffffffffffffff",
+		"EIP150ForkBlock": "0xffffffffffffffffff",
+		"EIP158ForkBlock": "0xffffffffffffffffff",
 		"metropolisForkBlock": "0xffffffffffffffffff",
 		"networkID" : "0x01",
 		"chainID": "0x01",
