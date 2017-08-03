@@ -35,7 +35,7 @@ using namespace dev::eth;
 const char* VMTraceChannel::name() { return "EVM"; }
 const char* ExecutiveWarnChannel::name() { return WarnChannel::name(); }
 
-StandardTrace::StandardTrace()
+StandardTrace::StandardTrace():
 {}
 
 bool changesMemory(Instruction _inst)
@@ -66,7 +66,6 @@ void StandardTrace::operator()(uint64_t _steps, uint64_t PC, Instruction inst, b
 
 string StandardTrace::json(bool _styled) const
 {
-	return "";
 }
 
 Executive::Executive(Block& _s, BlockChain const& _bc, unsigned _level):

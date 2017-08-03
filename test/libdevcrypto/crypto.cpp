@@ -690,6 +690,45 @@ BOOST_AUTO_TEST_CASE(cryptopp_aes128_ctr)
 	
 }
 
+BOOST_AUTO_TEST_CASE(cryptopp_aes128_cbc)
+{
+	const int aesKeyLen = 16;
+	BOOST_REQUIRE(sizeof(char) == sizeof(byte));
+	
+	AutoSeededRandomPool rng;
+	SecByteBlock key(0x00, aesKeyLen);
+	rng.GenerateBlock(key, key.size());
+	
+	// Generate random IV
+	byte iv[AES::BLOCKSIZE];
+	rng.GenerateBlock(iv, AES::BLOCKSIZE);
+	
+	string string128("AAAAAAAAAAAAAAAA");
+	string plainOriginal = string128;
+	
+	CryptoPP::CBC_Mode<Rijndael>::Encryption cbcEncryption(key, key.size(), iv);
+	cbcEncryption.ProcessData((byte*)&string128[0], (byte*)&string128[0], string128.size());
+	BOOST_REQUIRE(string128 != plainOriginal);
+	
+	CBC_Mode<Rijndael>::Decryption cbcDecryption(key, key.size(), iv);
+	cbcDecryption.ProcessData((byte*)&string128[0], (byte*)&string128[0], string128.size());
+	BOOST_REQUIRE(plainOriginal == string128);
+	
+	
+	// plaintext whose size isn't divisible by block size must use stream filter for padding
+	string string192("AAAAAAAAAAAAAAAABBBBBBBB");
+	plainOriginal = string192;
+
+	string cipher;
+	StreamTransformationFilter* aesStream = new StreamTransformationFilter(cbcEncryption, new StringSink(cipher));
+	StringSource source(string192, true, aesStream);
+	BOOST_REQUIRE(cipher.size() == 32);
+
+	byte* pOut = reinterpret_cast<byte*>(&string192[0]);
+	byte const* pIn = reinterpret_cast<byte const*>(cipher.data());
+	cbcDecryption.ProcessData(pOut, pIn, cipher.size());
+	BOOST_REQUIRE(string192 == plainOriginal);
+}
 
 BOOST_AUTO_TEST_CASE(recoverVgt3)
 {

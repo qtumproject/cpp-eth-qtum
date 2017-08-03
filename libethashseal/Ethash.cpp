@@ -25,6 +25,7 @@
 #include <libethereum/Interface.h>
 #include <libethcore/ChainOperationParams.h>
 #include <libethcore/CommonJS.h>
+#include "EthashCPUMiner.h"
 using namespace std;
 using namespace dev;
 using namespace eth;
@@ -37,6 +38,7 @@ void Ethash::init()
 Ethash::Ethash()
 {
 	map<string, GenericFarm<EthashProofOfWork>::SealerDescriptor> sealers;
+	sealers["cpu"] = GenericFarm<EthashProofOfWork>::SealerDescriptor{&EthashCPUMiner::instances, [](GenericMiner<EthashProofOfWork>::ConstructionInfo ci){ return new EthashCPUMiner(ci); }};
 	m_farm.setSealers(sealers);
 	m_farm.onSolutionFound([=](EthashProofOfWork::Solution const& sol)
 	{
