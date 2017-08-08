@@ -100,20 +100,10 @@ enum { HAVE_TRAP_INSTRUCTION = 0, };
 __attribute__((gnu_inline, always_inline))
 static void __inline__ debug_break(void)
 {
-	if (HAVE_TRAP_INSTRUCTION) {
-#if defined(ETH_EMSCRIPTEN)
-		asm("debugger");
-#else
-		trap_instruction();
-#endif
-	} else if (DEBUG_BREAK_PREFER_BUILTIN_TRAP_TO_SIGTRAP) {
-		 /* raises SIGILL on Linux x86{,-64}, to continue in gdb:
-		  * (gdb) handle SIGILL stop nopass
-		  * */
-		__builtin_trap();
-	} else {
-		raise(SIGTRAP);
-	}
+	 /* raises SIGILL on Linux x86{,-64}, to continue in gdb:
+	  * (gdb) handle SIGILL stop nopass
+	  * */
+	__builtin_trap();
 }
 
 #ifdef __cplusplus
