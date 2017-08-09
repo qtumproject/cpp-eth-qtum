@@ -174,6 +174,8 @@ string dev::getThreadName()
 
 void dev::setThreadName(string const& _n)
 {
+	std::string fake = _n;
+	fake.clear();
 }
 
 void dev::simpleDebugOut(std::string const& _s, char const*)
