@@ -169,6 +169,9 @@ extern "C" __declspec(dllimport) void __stdcall OutputDebugStringA(const char* l
 
 string dev::getThreadName()
 {
+#ifdef QTUM_BUILD
+    return "";
+#else
 #if defined(__GLIBC__) || defined(__APPLE__)
 	char buffer[128];
 	pthread_getname_np(pthread_self(), buffer, 127);
@@ -177,16 +180,19 @@ string dev::getThreadName()
 #else
 	return g_logThreadName.m_name.get() ? *g_logThreadName.m_name.get() : "<unknown>";
 #endif
+#endif
 }
 
 void dev::setThreadName(string const& _n)
 {
+#ifndef QTUM_BUILD
 #if defined(__GLIBC__)
 	pthread_setname_np(pthread_self(), _n.c_str());
 #elif defined(__APPLE__)
 	pthread_setname_np(_n.c_str());
 #else
 	g_logThreadName.m_name.reset(new std::string(_n));
+#endif
 #endif
 }
 
