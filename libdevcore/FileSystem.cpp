@@ -37,6 +37,7 @@
 using namespace std;
 using namespace dev;
 
+static_assert(BOOST_VERSION == 106300, "Wrong boost headers version");
 
 // Should be written to only once during startup
 static string s_ethereumDatadir;
