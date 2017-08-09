@@ -169,11 +169,25 @@ extern "C" __declspec(dllimport) void __stdcall OutputDebugStringA(const char* l
 
 string dev::getThreadName()
 {
-	return "";
+#if defined(__GLIBC__) || defined(__APPLE__)
+	char buffer[128];
+	pthread_getname_np(pthread_self(), buffer, 127);
+	buffer[127] = 0;
+	return buffer;
+#else
+	return g_logThreadName.m_name.get() ? *g_logThreadName.m_name.get() : "<unknown>";
+#endif
 }
 
 void dev::setThreadName(string const& _n)
 {
+#if defined(__GLIBC__)
+	pthread_setname_np(pthread_self(), _n.c_str());
+#elif defined(__APPLE__)
+	pthread_setname_np(_n.c_str());
+#else
+	g_logThreadName.m_name.reset(new std::string(_n));
+#endif
 }
 
 void dev::simpleDebugOut(std::string const& _s, char const*)
