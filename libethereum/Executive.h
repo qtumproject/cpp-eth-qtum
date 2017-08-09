@@ -19,7 +19,9 @@
 #pragma once
 
 #include <functional>
+#ifndef QTUM_BUILD
 #include <json/json.h>
+#endif
 #include <libdevcore/Log.h>
 #include <libevmcore/Instruction.h>
 #include <libethcore/Common.h>
@@ -74,7 +76,9 @@ private:
 	bool m_showMnemonics = false;
 	std::vector<Instruction> m_lastInst;
 	bytes m_lastCallData;
+#ifndef QTUM_BUILD
 	Json::Value m_trace;
+#endif
 	DebugOptions m_options;
 };
 

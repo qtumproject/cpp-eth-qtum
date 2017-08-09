@@ -19,7 +19,9 @@
 #include "Executive.h"
 
 #include <boost/timer.hpp>
+#ifndef QTUM_BUILD
 #include <json/json.h>
+#endif
 #include <libdevcore/CommonIO.h>
 #include <libevm/VMFactory.h>
 #include <libevm/VM.h>
@@ -36,9 +38,14 @@ using namespace dev::eth;
 const char* VMTraceChannel::name() { return "EVM"; }
 const char* ExecutiveWarnChannel::name() { return WarnChannel::name(); }
 
-StandardTrace::StandardTrace():
-	m_trace(Json::arrayValue)
+#ifdef QTUM_BUILD
+StandardTrace::StandardTrace()
 {}
+#else
+StandardTrace::StandardTrace():
+        m_trace(Json::arrayValue)
+{}
+#endif
 
 bool changesMemory(Instruction _inst)
 {
@@ -63,6 +70,9 @@ bool changesStorage(Instruction _inst)
 
 void StandardTrace::operator()(uint64_t _steps, uint64_t PC, Instruction inst, bigint newMemSize, bigint gasCost, bigint gas, VM* voidVM, ExtVMFace const* voidExt)
 {
+#ifdef QTUM_BUILD
+    return;
+#else
 	(void)_steps;
 
 	ExtVM const& ext = dynamic_cast<ExtVM const&>(*voidExt);
@@ -134,11 +144,16 @@ void StandardTrace::operator()(uint64_t _steps, uint64_t PC, Instruction inst, b
 		r["memexpand"] = toString(newMemSize);
 
 	m_trace.append(r);
+#endif
 }
 
 string StandardTrace::json(bool _styled) const
 {
+#ifdef QTUM_BUILD
+    return "";
+#else
 	return _styled ? Json::StyledWriter().write(m_trace) : Json::FastWriter().write(m_trace);
+#endif
 }
 
 Executive::Executive(Block& _s, BlockChain const& _bc, unsigned _level):
