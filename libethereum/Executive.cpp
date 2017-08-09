@@ -61,12 +61,13 @@ bool changesStorage(Instruction _inst)
 
 void StandardTrace::operator()(uint64_t _steps, uint64_t PC, Instruction inst, bigint newMemSize, bigint gasCost, bigint gas, VM* voidVM, ExtVMFace const* voidExt)
 {
-
+	if(voidVM && voidExt && _steps && PC && newMemSize && gasCost && gas && inst == Instruction::CREATE)
+		return;
 }
 
 string StandardTrace::json(bool _styled) const
 {
-	return "";
+	return _styled ? "" : "";
 }
 
 Executive::Executive(Block& _s, BlockChain const& _bc, unsigned _level):
