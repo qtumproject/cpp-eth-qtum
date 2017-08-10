@@ -10,7 +10,7 @@
  * MapViewOfFile:     http://msdn.microsoft.com/en-us/library/aa366761(VS.85).aspx
  * UnmapViewOfFile:   http://msdn.microsoft.com/en-us/library/aa366882(VS.85).aspx
  */
-
+#if defined(__MINGW32__) || defined(_WIN32)
 #include <io.h>
 #include <windows.h>
 #include "mmap.h"
@@ -89,3 +89,5 @@ void munmap(void* addr, size_t length)
 
 #undef DWORD_HI
 #undef DWORD_LO
+
+#endif

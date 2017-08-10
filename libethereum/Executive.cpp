@@ -19,6 +19,9 @@
 #include "Executive.h"
 
 #include <boost/timer.hpp>
+#ifndef QTUM_BUILD
+#include <json/json.h>
+#endif
 #include <libdevcore/CommonIO.h>
 #include <libevm/VMFactory.h>
 #include <libevm/VM.h>
@@ -35,8 +38,14 @@ using namespace dev::eth;
 const char* VMTraceChannel::name() { return "EVM"; }
 const char* ExecutiveWarnChannel::name() { return WarnChannel::name(); }
 
+#ifdef QTUM_BUILD
 StandardTrace::StandardTrace()
 {}
+#else
+StandardTrace::StandardTrace():
+        m_trace(Json::arrayValue)
+{}
+#endif
 
 bool changesMemory(Instruction _inst)
 {
@@ -61,12 +70,90 @@ bool changesStorage(Instruction _inst)
 
 void StandardTrace::operator()(uint64_t _steps, uint64_t PC, Instruction inst, bigint newMemSize, bigint gasCost, bigint gas, VM* voidVM, ExtVMFace const* voidExt)
 {
+#ifdef QTUM_BUILD
+    return;
+#else
+	(void)_steps;
 
+	ExtVM const& ext = dynamic_cast<ExtVM const&>(*voidExt);
+	VM& vm = *voidVM;
+
+	Json::Value r(Json::objectValue);
+
+	Json::Value stack(Json::arrayValue);
+	if (!m_options.disableStack)
+	{
+		for (auto const& i: vm.stack())
+			stack.append("0x" + toHex(toCompactBigEndian(i, 1)));
+		r["stack"] = stack;
+	}
+
+	bool newContext = false;
+	Instruction lastInst = Instruction::STOP;
+
+	if (m_lastInst.size() == ext.depth)
+	{
+		// starting a new context
+		assert(m_lastInst.size() == ext.depth);
+		m_lastInst.push_back(inst);
+		newContext = true;
+	}
+	else if (m_lastInst.size() == ext.depth + 2)
+	{
+		m_lastInst.pop_back();
+		lastInst = m_lastInst.back();
+	}
+	else if (m_lastInst.size() == ext.depth + 1)
+	{
+		// continuing in previous context
+		lastInst = m_lastInst.back();
+		m_lastInst.back() = inst;
+	}
+	else
+	{
+		cwarn << "GAA!!! Tracing VM and more than one new/deleted stack frame between steps!";
+		cwarn << "Attmepting naive recovery...";
+		m_lastInst.resize(ext.depth + 1);
+	}
+
+	Json::Value memJson(Json::arrayValue);
+	if (!m_options.disableMemory && (changesMemory(lastInst) || newContext))
+	{
+		for (unsigned i = 0; i < vm.memory().size(); i += 32)
+		{
+			bytesConstRef memRef(vm.memory().data() + i, 32);
+			memJson.append(toHex(memRef, 2, HexPrefix::DontAdd));
+		}
+		r["memory"] = memJson;
+	}
+
+	if (!m_options.disableStorage && (m_options.fullStorage || changesStorage(lastInst) || newContext))
+	{
+		Json::Value storage(Json::objectValue);
+		for (auto const& i: ext.state().storage(ext.myAddress))
+			storage["0x" + toHex(toCompactBigEndian(i.second.first, 1))] = "0x" + toHex(toCompactBigEndian(i.second.second, 1));
+		r["storage"] = storage;
+	}
+
+	if (m_showMnemonics)
+		r["op"] = instructionInfo(inst).name;
+	r["pc"] = toString(PC);
+	r["gas"] = toString(gas);
+	r["gasCost"] = toString(gasCost);
+	if (!!newMemSize)
+		r["memexpand"] = toString(newMemSize);
+
+	m_trace.append(r);
+#endif
 }
 
 string StandardTrace::json(bool _styled) const
 {
-	return "";
+#ifdef QTUM_BUILD
+    return "";
+#else
+	return _styled ? Json::StyledWriter().write(m_trace) : Json::FastWriter().write(m_trace);
+#endif
 }
 
 Executive::Executive(Block& _s, BlockChain const& _bc, unsigned _level):

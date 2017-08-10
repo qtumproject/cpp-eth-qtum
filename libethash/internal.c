@@ -38,9 +38,9 @@
 #include "sha3_cryptopp.h"
 
 #else
-
-
-
+#ifndef QTUM_BUILD
+#include "sha3.h"
+#else
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -70,8 +70,7 @@ void SHA3_512(uint8_t* ret, uint8_t const* data, size_t const size)
 #ifdef __cplusplus
 }
 #endif
-
-
+#endif //else QTUM_BUILD
 #endif // WITH_CRYPTOPP
 
 uint64_t ethash_get_datasize(uint64_t const block_number)

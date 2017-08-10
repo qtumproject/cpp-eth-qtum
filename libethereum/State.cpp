@@ -26,11 +26,12 @@
 #include <boost/timer.hpp>
 #include <libdevcore/CommonIO.h>
 #include <libdevcore/Assertions.h>
+#ifndef QTUM_BUILD
 #include <libdevcore/TrieHash.h>
+#endif
 #include <libevmcore/Instruction.h>
 #include <libethcore/Exceptions.h>
 #include <libevm/VMFactory.h>
-#include <libdevcore/TrieDB.h>
 #include "BlockChain.h"
 #include "CodeSizeCache.h"
 #include "Defaults.h"
