@@ -202,7 +202,7 @@ void VM::interpretCases()
 		
 		CASE(CREATE)
 		{
-            throwBadInstruction();
+			m_bounce = &VM::caseCreate;
 		}
 		BREAK;
 
