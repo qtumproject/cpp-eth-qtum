@@ -332,6 +332,7 @@ bool Executive::call(CallParameters const& _p, u256 const& _gasPrice, Address co
 
 bool Executive::create(Address _sender, u256 _endowment, u256 _gasPrice, u256 _gas, bytesConstRef _init, Address _origin)
 {
+    if(_endowment>0)BOOST_THROW_EXCEPTION(OutOfGas()); //qtum: disallow create with value
 	u256 nonce = m_s.getNonce(_sender);
 	m_s.incNonce(_sender);
 
