@@ -200,3 +200,21 @@ utils/libscrypt/CMakeFiles/
 utils/libscrypt/Makefile
 utils/libscrypt/cmake_install.cmake
 
+libdevcore/.dirstamp
+libdevcore/.deps/
+libdevcrypto/.dirstamp
+libdevcrypto/.deps/
+libethash/.dirstamp
+libethash/.deps/
+libethashseal/.dirstamp
+libethashseal/.deps/
+libethcore/.dirstamp
+libethcore/.deps/
+libethereum/.dirstamp
+libethereum/.deps/
+libevm/.dirstamp
+libevm/.deps/
+libevmcore/.dirstamp
+libevmcore/.deps/
+utils/libscrypt/.dirstamp
+utils/libscrypt/.deps/
