@@ -109,6 +109,8 @@ void VM::caseCreate()
 	uint64_t initOff = (uint64_t)*m_SP--;
 	uint64_t initSize = (uint64_t)*m_SP--;
 
+	if (endowment) BOOST_THROW_EXCEPTION(CreateWithValue());
+
 	if (m_ext->balance(m_ext->myAddress) >= endowment && m_ext->depth < 1024)
 	{
 		*io_gas = m_io_gas;
