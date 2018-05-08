@@ -451,7 +451,7 @@ private:
 		m_out.resize(m_out.size() + _br);
 		byte* b = &m_out.back();
 		for (; _i; _i >>= 8)
-			*(b--) = (byte)_i;
+			*(b--) = static_cast<byte>(_i & 0x00000000000000000000000000000000000000000000000000000000000000FF);
 	}
 
 	/// Our output byte stream.
