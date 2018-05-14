@@ -208,6 +208,8 @@ libethash/.dirstamp
 libethash/.deps/
 libethashseal/.dirstamp
 libethashseal/.deps/
+libethashseal/genesis/.dirstamp
+libethashseal/genesis/.deps/
 libethcore/.dirstamp
 libethcore/.deps/
 libethereum/.dirstamp
