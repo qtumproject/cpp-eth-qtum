@@ -34,7 +34,7 @@ namespace eth
 enum class Network
 {
 	//Olympic = 0,			///< Normal Olympic chain.
-	MainNetwork = 1,		///< Normal Frontier/Homestead/DAO/EIP150/EIP158/Metropolis chain.
+	MainNetwork = 1,		///< Normal Frontier/Homestead/DAO/EIP150/EIP158/Byzantium/Constantinople chain.
 	//Morden = 2,			///< Normal Morden chain.
 	Ropsten = 3,			///< New Ropsten Test Network
 	MainNetworkTest = 69,	///< MainNetwork rules but without genesis accounts (for transaction tests).

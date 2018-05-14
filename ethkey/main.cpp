@@ -1,57 +1,46 @@
 /*
-	This file is part of cpp-ethereum.
+    This file is part of cpp-ethereum.
 
-	cpp-ethereum is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
+    cpp-ethereum is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    cpp-ethereum is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
 
-	cpp-ethereum is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with cpp-ethereum.  If not, see <http://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU General Public License
+    along with cpp-ethereum.  If not, see <http://www.gnu.org/licenses/>.
 */
-/** @file main.cpp
- * @author Gav Wood <i@gavwood.com>
- * @date 2014
- * Ethereum client.
- */
 
-#include <thread>
+#include "KeyAux.h"
+
+#include <libdevcore/FileSystem.h>
+#include <libdevcore/LoggingProgramOptions.h>
+#include <libethcore/KeyManager.h>
+
+#include <eth-buildinfo.h>
+
+#include <boost/program_options.hpp>
+#include <boost/program_options/options_description.hpp>
+
 #include <fstream>
 #include <iostream>
-#include <libdevcore/FileSystem.h>
-#include <libdevcore/Log.h>
-#include <libethcore/KeyManager.h>
-#include "BuildInfo.h"
-#include "KeyAux.h"
+#include <thread>
+
 using namespace std;
 using namespace dev;
 using namespace dev::eth;
 
-void help()
-{
-	cout
-		<< "Usage ethkey [OPTIONS]" << endl
-		<< "Options:" << endl << endl;
-	KeyCLI::streamHelp(cout);
-	cout
-		<< "General Options:" << endl
-		<< "    -v,--verbosity <0 - 9>  Set the log verbosity from 0 to 9 (default: 8)." << endl
-		<< "    -V,--version  Show the version and exit." << endl
-		<< "    -h,--help  Show this help message and exit." << endl
-		;
-	exit(0);
-}
+namespace po = boost::program_options;
 
 void version()
 {
-	cout << "ethkey version " << dev::Version << endl;
-	cout << "Build: " << DEV_QUOTED(ETH_BUILD_PLATFORM) << "/" << DEV_QUOTED(ETH_BUILD_TYPE) << endl;
-	exit(0);
+    const auto* buildinfo = eth_get_buildinfo();
+    cout << "ethkey " << buildinfo->project_version << "\nBuild: " << buildinfo->system_name << "/"
+         << buildinfo->build_type << endl;
+    exit(0);
 }
 
 /*
@@ -70,37 +59,68 @@ that users do not need to install language packs for their OS.
 void setDefaultOrCLocale()
 {
 #if __unix__
-	if (!std::setlocale(LC_ALL, ""))
-	{
-		setenv("LC_ALL", "C", 1);
-	}
+    if (!std::setlocale(LC_ALL, ""))
+    {
+        setenv("LC_ALL", "C", 1);
+    }
 #endif
 }
 
 int main(int argc, char** argv)
 {
-	setDefaultOrCLocale();
-	KeyCLI m(KeyCLI::OperationMode::ListBare);
-	g_logVerbosity = 0;
+    setDefaultOrCLocale();
+    KeyCLI m(KeyCLI::OperationMode::ListBare);
 
-	for (int i = 1; i < argc; ++i)
-	{
-		string arg = argv[i];
-		if (m.interpretOption(i, argc, argv)) {}
-		else if ((arg == "-v" || arg == "--verbosity") && i + 1 < argc)
-			g_logVerbosity = atoi(argv[++i]);
-		else if (arg == "-h" || arg == "--help")
-			help();
-		else if (arg == "-V" || arg == "--version")
-			version();
-		else
-		{
-			cerr << "Invalid argument: " << arg << endl;
-			exit(-1);
-		}
-	}
+    LoggingOptions loggingOptions;
+    po::options_description loggingProgramOptions(createLoggingProgramOptions(
+        po::options_description::m_default_line_length, loggingOptions));
 
-	m.execute();
+    po::options_description generalOptions("General Options");
+    auto addOption = generalOptions.add_options();
+    addOption("version,V", "Show the version and exit.");
+    addOption("help,h", "Show this help message and exit.");
 
-	return 0;
+    po::options_description allowedOptions("Allowed options");
+    allowedOptions.add(loggingProgramOptions).add(generalOptions);
+
+    po::variables_map vm;
+    vector<string> unrecognisedOptions;
+    try
+    {
+        po::parsed_options parsed =
+            po::command_line_parser(argc, argv).options(allowedOptions).allow_unregistered().run();
+        unrecognisedOptions = collect_unrecognized(parsed.options, po::include_positional);
+        po::store(parsed, vm);
+        po::notify(vm);
+    }
+    catch (po::error const& e)
+    {
+        cerr << e.what();
+        return -1;
+    }
+
+    for (size_t i = 0; i < unrecognisedOptions.size(); ++i)
+        if (!m.interpretOption(i, unrecognisedOptions))
+        {
+            cerr << "Invalid argument: " << unrecognisedOptions[i] << endl;
+            return -1;
+        }
+
+    if (vm.count("help"))
+    {
+        cout
+            << "Usage ethkey [OPTIONS]" << endl
+            << "Options:" << endl << endl;
+        KeyCLI::streamHelp(cout);
+        cout << allowedOptions;
+        return 0;
+    }
+    if (vm.count("version"))
+        version();
+
+    setupLogging(loggingOptions);
+
+    m.execute();
+
+    return 0;
 }

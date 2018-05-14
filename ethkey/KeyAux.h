@@ -22,31 +22,24 @@
  * CLI module for key management.
  */
 
-#include <thread>
-#include <chrono>
-#include <fstream>
-#include <iostream>
+#include <libdevcore/CommonIO.h>
+#include <libdevcore/FileSystem.h>
+#include <libdevcore/SHA3.h>
+#include <libethcore/KeyManager.h>
+#include <libethcore/TransactionBase.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/trim_all.hpp>
-#include <libdevcore/SHA3.h>
-#include <libdevcore/FileSystem.h>
-#include <libethcore/KeyManager.h>
-#include <libethcore/ICAP.h>
-#include <libethcore/Transaction.h>
+#include <chrono>
+#include <fstream>
+#include <iosfwd>
+#include <thread>
 
 using namespace std;
 using namespace dev;
 using namespace dev::eth;
 using namespace boost::algorithm;
 
-#undef RETURN
-
 class BadArgument: public Exception {};
-
-string getAccountPassword(KeyManager& keyManager, Address const& a)
-{
-	return getPassword("Enter passphrase for address " + keyManager.accountName(a) + " (" + a.abridged() + "; hint:" + keyManager.passwordHint(a) + "): ");
-}
 
 string createPassword(std::string const& _prompt)
 {
@@ -115,8 +108,9 @@ public:
 
 	KeyCLI(OperationMode _mode = OperationMode::None): m_mode(_mode) {}
 
-	bool interpretOption(int& i, int argc, char** argv)
+	bool interpretOption(size_t& i, vector<string> const& argv)
 	{
+		size_t argc = argv.size();
 		string arg = argv[i];
 		if (arg == "--wallet-path" && i + 1 < argc)
 			m_walletPath = argv[++i];
@@ -292,12 +286,6 @@ public:
 		{
 			if (h128 u = fromUUID(_signKey))
 				return Secret(secretStore().secret(u, [&](){ return getPassword("Enter passphrase for key: "); }));
-			if (_signKey.substr(0, 6) == "brain#" && _signKey.find(":") != string::npos)
-				return KeyManager::subkey(KeyManager::brain(_signKey.substr(_signKey.find(":"))), stoul(_signKey.substr(6, _signKey.find(":") - 7)));
-			if (_signKey.substr(0, 6) == "brain:")
-				return KeyManager::brain(_signKey.substr(6));
-			if (_signKey == "brain")
-				return KeyManager::brain(getPassword("Enter brain wallet phrase: "));
 			Address a;
 			try
 			{
@@ -318,8 +306,6 @@ public:
 			exit(-1);
 		}
 	}
-
-	std::string userVisible(Address const& _a) const { return ICAP(_a).encoded() + " (" + _a.abridged() + ")"; }
 
 	void execute()
 	{
@@ -354,15 +340,15 @@ public:
 				else
 				{
 					cout << "  type: message" << endl;
-					cout << "  to: " << userVisible(t.to()) << endl;
+					cout << "  to: " << t.to() << endl;
 					cout << "  data: " << (t.data().empty() ? "none" : toHex(t.data())) << endl;
 				}
 				try
 				{
 					auto s = t.sender();
 					if (t.isCreation())
-						cout << "  creates: " << userVisible(toAddress(s, t.nonce())) << endl;
-					cout << "  from: " << userVisible(s) << endl;
+						cout << "  creates: " << toAddress(s, t.nonce()) << endl;
+					cout << "  from: " << s << endl;
 				}
 				catch (...)
 				{
@@ -419,8 +405,6 @@ public:
 		case OperationMode::Inspect:
 		{
 			keyManager(true);
-			if (m_inputs.empty())
-				m_inputs.push_back(toAddress(KeyManager::brain(getPassword("Enter brain wallet key phrase: "))).hex());
 			for (auto i: m_inputs)
 			{
 				Address a = userToAddress(i);
@@ -428,8 +412,7 @@ public:
 					cout << keyManager().accountName(a) << " (" << a.abridged() << ")" << endl;
 				else
 					cout << a.abridged() << endl;
-				cout << "  ICAP: " << ICAP(a).encoded() << endl;
-				cout << "  Raw hex: " << a.hex() << endl;
+				cout << "  Address: " << a.hex() << endl;
 				if (m_showSecret)
 				{
 					Secret s = keyManager(true).secret(a);
@@ -452,8 +435,7 @@ public:
 			auto k = makeKey();
 			h128 u = secretStore().importSecret(k.secret().ref(), m_lock);
 			cout << "Created key " << toUUID(u) << endl;
-			cout << "  ICAP: " << ICAP(k.address()).encoded() << endl;
-			cout << "  Raw hex: " << k.address().hex() << endl;
+			cout << "  Address: " << k.address().hex() << endl;
 			break;
 		}
 		case OperationMode::ImportBare:
@@ -487,23 +469,20 @@ public:
 					bytesSec s = secretStore().secret(u, [&](){ return getPassword("Enter passphrase for key " + i + ": "); });
 					cout << "Key " << i << ":" << endl;
 					cout << "  UUID: " << toUUID(u) << ":" << endl;
-					cout << "  ICAP: " << ICAP(toAddress(Secret(s))).encoded() << endl;
-					cout << "  Raw hex: " << toAddress(Secret(s)).hex() << endl;
+					cout << "  Address: " << toAddress(Secret(s)).hex() << endl;
 					cout << "  Secret: " << (m_showSecret ? toHex(s.ref()) : (toHex(s.ref().cropped(0, 8)) + "...")) << endl;
 				}
 				else if (h128 u = fromUUID(i))
 				{
 					bytesSec s = secretStore().secret(u, [&](){ return getPassword("Enter passphrase for key " + toUUID(u) + ": "); });
 					cout << "Key " << i << ":" << endl;
-					cout << "  ICAP: " << ICAP(toAddress(Secret(s))).encoded() << endl;
-					cout << "  Raw hex: " << toAddress(Secret(s)).hex() << endl;
+					cout << "  Address: " << toAddress(Secret(s)).hex() << endl;
 					cout << "  Secret: " << (m_showSecret ? toHex(s.ref()) : (toHex(s.ref().cropped(0, 8)) + "...")) << endl;
 				}
 				else if (Address a = toAddress(i))
 				{
 					cout << "Key " << a.abridged() << ":" << endl;
-					cout << "  ICAP: " << ICAP(a).encoded() << endl;
-					cout << "  Raw hex: " << a.hex() << endl;
+					cout << "  Address: " << a.hex() << endl;
 				}
 				else
 					cerr << "Couldn't inspect " << i << "; not found." << endl;
@@ -539,8 +518,7 @@ public:
 				cout << "  Uses master passphrase." << endl;
 			else
 				cout << "  Password hint: " << m_lockHint << endl;
-			cout << "  ICAP: " << ICAP(k.address()).encoded() << endl;
-			cout << "  Raw hex: " << k.address().hex() << endl;
+			cout << "  Address: " << k.address().hex() << endl;
 			break;
 		}
 		case OperationMode::Import:
@@ -576,8 +554,7 @@ public:
 				cout << "  Uses master passphrase." << endl;
 			else
 				cout << "  Password hint: " << m_lockHint << endl;
-			cout << "  ICAP: " << ICAP(a).encoded() << endl;
-			cout << "  Raw hex: " << a.hex() << endl;
+			cout << "  Address: " << a.hex() << endl;
 			break;
 		}
 		case OperationMode::ImportWithAddress:
@@ -610,7 +587,7 @@ public:
 			cout << "Successfully imported " << i << ":" << endl;
 			cout << "  Name: " << m_name << endl;
 			cout << "  UUID: " << toUUID(u) << endl;
-			cout << "  Raw hex: " << m_address << endl;
+			cout << "  Address: " << m_address << endl;
 			break;
 		}
 		case OperationMode::ImportPresale:
@@ -629,7 +606,7 @@ public:
 					Secret s = keyManager().secret(a, [&](){ return pw = getPassword("Enter old passphrase for key '" + i + "' (hint: " + keyManager().passwordHint(a) + "): "); });
 					if (!s)
 					{
-						cerr << "Invalid password for key " << userVisible(a) << endl;
+						cerr << "Invalid password for address " << a << endl;
 						continue;
 					}
 					pair<string, string> np = createPassword(keyManager(), "Enter new passphrase for key '" + i + "': ");
@@ -670,21 +647,14 @@ public:
 				{
 					got.insert(a);
 					cout << toUUID(u) << " " << a.abridged();
-					string s = ICAP(a).encoded();
-					cout << " " << s << string(35 - s.size(), ' ');
+					cout << " " << a << " ";
 					cout << " " << keyManager().accountName(a) << endl;
 				}
 				else
 					bare.push_back(u);
-			for (auto const& a: keyManager().accounts())
-				if (!got.count(a))
-				{
-					cout << "               (Brain)               " << a.abridged();
-					cout << " " << ICAP(a).encoded() << " ";
-					cout << " " << keyManager().accountName(a) << endl;
-				}
 			for (auto const& u: bare)
 				cout << toUUID(u) << " (Bare)" << endl;
+			break;
 		}
 		default: break;
 		}
@@ -717,22 +687,16 @@ public:
 			<< "    importpresale <file> <name>  Import a presale wallet into a key with the given name." << endl
 			<< "    importwithaddress [<uuid>|<file>|<secret-hex>] <address> <name>  Import keys from given source with given address and place in wallet." << endl
 			<< "    export [ <address>|<uuid> , ... ]  Export given keys." << endl
-			<< "    inspect [ <address>|<name>|<uuid>|<brainwallet> ] ...  Print information on the given keys." << endl
+			<< "    inspect [ <address>|<name>|<uuid> ] ...  Print information on the given keys." << endl
 //			<< "    recode [ <address>|<uuid>|<file> , ... ]  Decrypt and re-encrypt given keys." << endl
 			<< "    kill [ <address>|<uuid>, ... ]  Delete given keys." << endl
-			<< "Brain wallet operating modes:" << endl
-			<< "WARNING: Brain wallets with human-generated passphrasses are highly susceptible to attack. Don't use such a thing for" << endl
-			<< "anything important." << endl
-			<< "    newbrain [ <name>|-- ]  Create a new 13-word brain wallet; argument is the name or if --, do not add to wallet." << endl
-			<< "    importbrain <name>  Import your own brain wallet." << endl
-			<< "Brainwallets are specified as: brain((#<HD-index>):<brain-phrase>), e.g. brain:PASSWORD." << endl
 			<< "Wallet configuration:" << endl
 			<< "    --wallet-path <path>  Specify Ethereum wallet path (default: " << KeyManager::defaultPath() << ")" << endl
 			<< "    -m, --master <passphrase>  Specify wallet (master) passphrase." << endl
 			<< endl
 			<< "Transaction operating modes:" << endl
 			<< "    decode ( [ <hex>|<file> ] )  Decode given transaction." << endl
-			<< "    sign [ <address>|<uuid>|<file>|<brainwallet> ] ( [ <hex>|<file> , ... ] )  (Re-)Sign given transaction." << endl
+			<< "    sign [ <address>|<uuid>|<file> ] ( [ <hex>|<file> , ... ] )  (Re-)Sign given transaction." << endl
 			<< "Transaction specification options (to be used when no transaction hex or file is given):" << endl
 			<< "    --tx-dest <address>  Specify the destination address for the transaction to be signed." << endl
 			<< "    --tx-data <hex>  Specify the hex data for the transaction to be signed." << endl
@@ -773,16 +737,6 @@ public:
 				b = asBytes(s);
 		}
 		return b;
-	}
-
-	static bool isTrue(std::string const& _m)
-	{
-		return _m == "on" || _m == "yes" || _m == "true" || _m == "1";
-	}
-
-	static bool isFalse(std::string const& _m)
-	{
-		return _m == "off" || _m == "no" || _m == "false" || _m == "0";
 	}
 
 private:
@@ -847,8 +801,8 @@ private:
 	OperationMode m_mode;
 
 	/// Wallet stuff
-	string m_secretsPath = SecretStore::defaultPath();
-	string m_walletPath = KeyManager::defaultPath();
+	boost::filesystem::path m_secretsPath = SecretStore::defaultPath();
+	boost::filesystem::path m_walletPath = KeyManager::defaultPath();
 
 	/// Wallet passphrase stuff
 	string m_masterPassword;
@@ -874,6 +828,4 @@ private:
 
 	string m_kdf = "scrypt";
 	map<string, string> m_kdfParams;
-//	string m_cipher;
-//	map<string, string> m_cipherParams;
 };

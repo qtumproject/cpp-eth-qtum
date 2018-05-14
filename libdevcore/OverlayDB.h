@@ -33,28 +33,35 @@ namespace dev
 class OverlayDB: public MemoryDB
 {
 public:
-	OverlayDB(ldb::DB* _db = nullptr): m_db(_db) {}
-	~OverlayDB();
+    explicit OverlayDB(std::unique_ptr<db::DatabaseFace> _db = nullptr)
+      : m_db(_db.release(), [](db::DatabaseFace* db) {
+            clog(14, "overlaydb") << "Closing state DB";
+            delete db;
+        })
+    {}
 
-	ldb::DB* db() const { return m_db.get(); }
+    ~OverlayDB();
 
-	void commit();
+    // Copyable
+    OverlayDB(OverlayDB const&) = default;
+    OverlayDB& operator=(OverlayDB const&) = default;
+    // Movable
+    OverlayDB(OverlayDB&&) = default;
+    OverlayDB& operator=(OverlayDB&&) = default;
+
+    void commit();
 	void rollback();
 
 	std::string lookup(h256 const& _h) const;
 	bool exists(h256 const& _h) const;
 	void kill(h256 const& _h);
-	bool deepkill(h256 const& _h);
 
 	bytes lookupAux(h256 const& _h) const;
 
 private:
 	using MemoryDB::clear;
 
-	std::shared_ptr<ldb::DB> m_db;
-
-	ldb::ReadOptions m_readOptions;
-	ldb::WriteOptions m_writeOptions;
+    std::shared_ptr<db::DatabaseFace> m_db;
 };
 
 }

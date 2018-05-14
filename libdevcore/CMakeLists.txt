@@ -1,15 +1,13 @@
-file(GLOB SRC_LIST "*.cpp")
-file(GLOB HEADERS "*.h")
+file(GLOB sources "*.cpp")
+file(GLOB headers "*.h")
 
-add_library(devcore ${SRC_LIST} ${HEADERS})
+add_library(devcore ${sources} ${headers})
 
-target_include_directories(devcore PRIVATE ..)
-target_include_directories(devcore SYSTEM PUBLIC ${BOOST_INCLUDE_DIR})
+# Needed to prevent including system-level boost headers:
+target_include_directories(devcore SYSTEM PUBLIC ${Boost_INCLUDE_DIR} PRIVATE ../utils)
 
-add_dependencies(devcore BuildInfo.h)
+target_link_libraries(devcore eth-buildinfo Boost::filesystem Boost::system Boost::log Boost::thread Threads::Threads)
 
-if (NOT EMSCRIPTEN)
-    find_package(LevelDB)
-    target_include_directories(devcore SYSTEM PUBLIC ${LEVELDB_INCLUDE_DIRS})
-    target_link_libraries(devcore Boost::Filesystem Boost::Random Boost::Thread ${LEVELDB_LIBRARIES})
-endif()
+find_package(LevelDB)
+target_include_directories(devcore SYSTEM PUBLIC ${LEVELDB_INCLUDE_DIRS})
+target_link_libraries(devcore ${LEVELDB_LIBRARIES})

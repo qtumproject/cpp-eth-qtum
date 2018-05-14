@@ -22,19 +22,48 @@
 # (c) 2014-2016 cpp-ethereum contributors.
 #------------------------------------------------------------------------------
 
-cmake_minimum_required(VERSION 3.0.0)
+cmake_minimum_required(VERSION 3.5.1)
+
+include(evmc/cmake/cable/bootstrap.cmake)
+include(CableBuildInfo)
+include(CableBuildType)
+include(CableToolchains)
+include(GNUInstallDirs)
+
+cable_configure_toolchain(DEFAULT cxx11)
 
 set(ETH_CMAKE_DIR "${CMAKE_CURRENT_LIST_DIR}/cmake" CACHE PATH "The path to the cmake directory")
 list(APPEND CMAKE_MODULE_PATH ${ETH_CMAKE_DIR})
 
 set(CPP_ETHEREUM_DIR "${CMAKE_CURRENT_LIST_DIR}" CACHE PATH "Path to the root directory for cpp-ethereum")
 
-# set cmake_policies
-include(EthPolicy)
-eth_policy()
+# Map current configuration to configurations of imported targets.
+set(CMAKE_MAP_IMPORTED_CONFIG_DEBUG Release)
+set(CMAKE_MAP_IMPORTED_CONFIG_RELWITHDEBINFO Release)
 
-# project name and version should be set after cmake_policy CMP0048
-project(cpp-ethereum VERSION "1.3.0")
+set(HUNTER_CONFIGURATION_TYPES Release)
+set(HUNTER_JOBS_NUMBER 4)
+set(HUNTER_CACHE_SERVERS "https://github.com/ethereum/hunter-cache")
+set(HUNTER_PASSWORDS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Hunter/passwords.cmake)
+
+# In CI builds upload the binaries if the GITHUB_USER_PASSWORD was decrypted
+# (only for branches and internal PRs).
+if("$ENV{CI}" AND NOT "$ENV{GITHUB_USER_PASSWORD}" STREQUAL "")
+    set(run_upload YES)
+else()
+    set(run_upload NO)
+endif()
+option(HUNTER_RUN_UPLOAD "Upload binaries to the cache server" ${run_upload})
+
+include(HunterGate)
+HunterGate(
+    URL "https://github.com/ruslo/hunter/archive/v0.20.9.tar.gz"
+    SHA1 "8f7cf6d719d05c49224a4ebeba90c6bb90b90f4a"
+    LOCAL
+)
+
+project(cpp-ethereum)
+set(PROJECT_VERSION 1.3.0)
 
 if (NOT WIN32)
     if (NOT EXISTS ${CMAKE_SOURCE_DIR}/evmjit/.git)
@@ -42,10 +71,15 @@ if (NOT WIN32)
     endif()
 endif()
 
+cable_set_build_type(DEFAULT RelWithDebInfo CONFIGURATION_TYPES Debug;Release;RelWithDebInfo)
+
+cable_add_buildinfo_library(PREFIX eth)
+
 set(CMAKE_SKIP_INSTALL_ALL_DEPENDENCY On)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)### qtum
 
+include(EthCcache)
 include(EthOptions)
 include(EthCompilerSettings)
 if (NOT WIN32)
@@ -54,13 +88,38 @@ endif()
 include(EthDependencies)
 include(EthUtils)
 
+
 include(ProjectBoost)
 include(ProjectCryptopp)
 include(ProjectJsonCpp)
 if (NOT WIN32)
     include(ProjectJsonRpcCpp)
 endif()
+set(Boost_USE_STATIC_LIBS ON)
+set(Boost_USE_MULTITHREADED ON)
+hunter_add_package(Boost COMPONENTS program_options filesystem system thread context fiber log)
+find_package(Boost CONFIG REQUIRED program_options filesystem system thread context fiber log)
+
+hunter_add_package(jsoncpp)
+find_package(jsoncpp CONFIG REQUIRED)
+
+hunter_add_package(Snappy)
+find_package(Snappy CONFIG REQUIRED)
+
+hunter_add_package(cryptopp)
+find_package(cryptopp CONFIG REQUIRED)
+
+hunter_add_package(libjson-rpc-cpp)
+find_package(libjson-rpc-cpp CONFIG REQUIRED)
+
+hunter_add_package(libscrypt)
+find_package(libscrypt CONFIG REQUIRED)
+
 include(ProjectSecp256k1)
+include(ProjectLibFF)
+
+# Import binaryen library before hera to make it available also to testeth.
+include(hera/cmake/ProjectBinaryen.cmake)
 
 if (WIN32)
     configure_project(MINIUPNPC)
@@ -70,13 +129,35 @@ else()
 
     add_subdirectory(eth)
 endif()
+
+find_package(Threads)
+
+if(MINIUPNPC)
+    find_package(Miniupnpc 1.8.2013 REQUIRED)
+endif()
+
+set(UTILS_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/utils")
+
+configure_project()
+
+add_subdirectory(evmc)
+
+if (HERA)
+    add_subdirectory(hera)
+endif()
+
+#Global include path for all libs.
+include_directories("${CMAKE_SOURCE_DIR}")
+
 add_subdirectory(libdevcore)
 add_subdirectory(libdevcrypto)
+add_subdirectory(libp2p)
+
 add_subdirectory(libethash)
-add_subdirectory(libethashseal)
+
 add_subdirectory(libethcore)
-add_subdirectory(libethereum)
 add_subdirectory(libevm)
+
 add_subdirectory(libevmcore)
 if (NOT WIN32)
     if (NOT EMSCRIPTEN)
@@ -86,9 +167,17 @@ if (NOT WIN32)
     add_subdirectory(libwebthree)
     add_subdirectory(libwhisper)
 
+add_subdirectory(libethereum)
+add_subdirectory(libethashseal)
+
+add_subdirectory(libwebthree)
+add_subdirectory(libweb3jsonrpc)
+
+
     if (EVMJIT)
         add_subdirectory(evmjit)
     endif()
+
 
     if (TOOLS)
         add_subdirectory(ethkey)
@@ -103,7 +192,28 @@ if (NOT WIN32)
     if (TESTS)
 	    add_subdirectory(test)
     endif()
+
+add_subdirectory(eth)
+
+if (TOOLS)
+    add_subdirectory(ethkey)
+    add_subdirectory(ethvm)
+    add_subdirectory(rlp)
 endif()
 
-# TODO - split out json_spirit, libscrypt and sec256k1
-add_subdirectory(utils)
+if (TESTS)
+    enable_testing()
+    add_subdirectory(test)
+
+endif()
+
+
+if(WIN32)
+    set(CPACK_GENERATOR ZIP)
+else()
+    set(CPACK_GENERATOR TGZ)
+endif()
+set(CPACK_PACKAGE_FILE_NAME ${PROJECT_NAME})
+set(CPACK_PACKAGE_CHECKSUM SHA256)
+set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY FALSE)
+include(CPack)

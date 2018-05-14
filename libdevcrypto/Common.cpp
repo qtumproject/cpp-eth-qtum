@@ -25,11 +25,12 @@
 #include <secp256k1.h>
 #include <secp256k1_ecdh.h>
 #include <secp256k1_recovery.h>
+#include <secp256k1_sha256.h>
 #include <cryptopp/aes.h>
 #include <cryptopp/pwdbased.h>
 #include <cryptopp/sha.h>
 #include <cryptopp/modes.h>
-#include <libscrypt/libscrypt.h>
+#include <libscrypt.h>
 #include <libdevcore/SHA3.h>
 #include <libdevcore/RLP.h>
 #include "AES.h"
@@ -38,7 +39,6 @@
 using namespace std;
 using namespace dev;
 using namespace dev::crypto;
-using namespace CryptoPP;
 
 namespace
 {
@@ -61,8 +61,6 @@ bool dev::SignatureStruct::isValid() const noexcept
 
 	return (v <= 1 && r > s_zero && s > s_zero && r < s_max && s < s_max);
 }
-
-Address dev::ZeroAddress = Address();
 
 Public dev::toPublic(Secret const& _secret)
 {
@@ -164,10 +162,10 @@ bytes dev::encryptAES128CTR(bytesConstRef _k, h128 const& _iv, bytesConstRef _pl
 {
 	if (_k.size() != 16 && _k.size() != 24 && _k.size() != 32)
 		return bytes();
-	SecByteBlock key(_k.data(), _k.size());
+	CryptoPP::SecByteBlock key(_k.data(), _k.size());
 	try
 	{
-		CTR_Mode<AES>::Encryption e;
+		CryptoPP::CTR_Mode<CryptoPP::AES>::Encryption e;
 		e.SetKeyWithIV(key, key.size(), _iv.data());
 		bytes ret(_plain.size());
 		e.ProcessData(ret.data(), _plain.data(), _plain.size());
@@ -184,10 +182,10 @@ bytesSec dev::decryptAES128CTR(bytesConstRef _k, h128 const& _iv, bytesConstRef 
 {
 	if (_k.size() != 16 && _k.size() != 24 && _k.size() != 32)
 		return bytesSec();
-	SecByteBlock key(_k.data(), _k.size());
+	CryptoPP::SecByteBlock key(_k.data(), _k.size());
 	try
 	{
-		CTR_Mode<AES>::Decryption d;
+		CryptoPP::CTR_Mode<CryptoPP::AES>::Decryption d;
 		d.SetKeyWithIV(key, key.size(), _iv.data());
 		bytesSec ret(_cipher.size());
 		d.ProcessData(ret.writable().data(), _cipher.data(), _cipher.size());
@@ -263,7 +261,7 @@ bool dev::verify(Public const& _p, Signature const& _s, h256 const& _hash)
 bytesSec dev::pbkdf2(string const& _pass, bytes const& _salt, unsigned _iterations, unsigned _dkLen)
 {
 	bytesSec ret(_dkLen);
-	if (PKCS5_PBKDF2_HMAC<SHA256>().DeriveKey(
+	if (CryptoPP::PKCS5_PBKDF2_HMAC<CryptoPP::SHA256>().DeriveKey(
 		ret.writable().data(),
 		_dkLen,
 		0,
@@ -345,15 +343,17 @@ Secret Nonce::next()
 	return sha3(~m_value);
 }
 
-void dev::crypto::ecdh::agree(Secret const& _s, Public const& _r, Secret& o_s)
+bool ecdh::agree(Secret const& _s, Public const& _r, Secret& o_s) noexcept
 {
 	auto* ctx = getCtx();
 	static_assert(sizeof(Secret) == 32, "Invalid Secret type size");
 	secp256k1_pubkey rawPubkey;
 	std::array<byte, 65> serializedPubKey{{0x04}};
 	std::copy(_r.asArray().begin(), _r.asArray().end(), serializedPubKey.begin() + 1);
-	auto r = secp256k1_ec_pubkey_parse(ctx, &rawPubkey, serializedPubKey.data(), serializedPubKey.size());
-	assert(r == 1);
+	if (!secp256k1_ec_pubkey_parse(ctx, &rawPubkey, serializedPubKey.data(), serializedPubKey.size()))
+		return false;  // Invalid public key.
+	// FIXME: We should verify the public key when constructed, maybe even keep
+	//        secp256k1_pubkey as the internal data of Public.
 	std::array<byte, 33> compressedPoint;
 #ifdef QTUM_BUILD
     r = secp256k1_ecdh(ctx, compressedPoint.data(), &rawPubkey, _s.data());
@@ -362,4 +362,35 @@ void dev::crypto::ecdh::agree(Secret const& _s, Public const& _r, Secret& o_s)
 #endif
 	assert(r == 1);  // TODO: This should be "invalid secret key" exception.
 	std::copy(compressedPoint.begin() + 1, compressedPoint.end(), o_s.writable().data());
+	return true;
+}
+
+bytes ecies::kdf(Secret const& _z, bytes const& _s1, unsigned kdByteLen)
+{
+	auto reps = ((kdByteLen + 7) * 8) / 512;
+	// SEC/ISO/Shoup specify counter size SHOULD be equivalent
+	// to size of hash output, however, it also notes that
+	// the 4 bytes is okay. NIST specifies 4 bytes.
+	std::array<byte, 4> ctr{{0, 0, 0, 1}};
+	bytes k;
+	secp256k1_sha256_t ctx;
+	for (unsigned i = 0; i <= reps; i++)
+	{
+		secp256k1_sha256_initialize(&ctx);
+		secp256k1_sha256_write(&ctx, ctr.data(), ctr.size());
+		secp256k1_sha256_write(&ctx, _z.data(), Secret::size);
+		secp256k1_sha256_write(&ctx, _s1.data(), _s1.size());
+		// append hash to k
+		std::array<byte, 32> digest;
+		secp256k1_sha256_finalize(&ctx, digest.data());
+
+		k.reserve(k.size() + h256::size);
+		move(digest.begin(), digest.end(), back_inserter(k));
+
+		if (++ctr[3] || ++ctr[2] || ++ctr[1] || ++ctr[0])
+			continue;
+	}
+
+	k.resize(kdByteLen);
+	return k;
 }

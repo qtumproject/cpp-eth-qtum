@@ -24,7 +24,6 @@
 #include <csignal>
 #include <jsonrpccpp/common/exception.h>
 #include <libdevcore/CommonData.h>
-#include <libevmcore/Instruction.h>
 #include <libethereum/Client.h>
 #include <libethashseal/EthashClient.h>
 #include <libwebthree/WebThree.h>
@@ -32,7 +31,6 @@
 #include <libweb3jsonrpc/JsonHelper.h>
 #include "Eth.h"
 #include "AccountHolder.h"
-#include "JsonHelper.h"
 
 using namespace std;
 using namespace jsonrpc;
@@ -40,13 +38,6 @@ using namespace dev;
 using namespace eth;
 using namespace shh;
 using namespace dev::rpc;
-
-#if ETH_DEBUG
-const unsigned dev::SensibleHttpThreads = 1;
-#else
-const unsigned dev::SensibleHttpThreads = 4;
-#endif
-const unsigned dev::SensibleHttpPort = 8545;
 
 Eth::Eth(eth::Interface& _eth, eth::AccountHolder& _ethAccounts):
 	m_eth(_eth),
@@ -140,7 +131,7 @@ string Eth::eth_getStorageRoot(string const& _address, string const& _blockNumbe
 	}
 }
 
-string Eth::eth_pendingTransactions()
+Json::Value Eth::eth_pendingTransactions()
 {
 	//Return list of transaction that being sent by local accounts
 	Transactions ours;
@@ -156,7 +147,7 @@ string Eth::eth_pendingTransactions()
 		}
 	}
 
-	return toJS(ours);
+	return toJson(ours);
 }
 
 string Eth::eth_getTransactionCount(string const& _address, string const& _blockNumber)
@@ -663,6 +654,11 @@ Json::Value Eth::eth_syncing()
 	info["highestBlock"] = sync.highestBlockNumber;
 	info["currentBlock"] = sync.currentBlockNumber;
 	return info;
+}
+
+string Eth::eth_chainId()
+{
+	return toJS(client()->chainId());
 }
 
 bool Eth::eth_submitWork(string const& _nonce, string const&, string const& _mixHash)
