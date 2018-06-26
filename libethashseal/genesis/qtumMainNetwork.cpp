@@ -23,11 +23,11 @@ R"E(
 	"sealEngine": "Ethash",
 	"params": {
 		"accountStartNonce": "0x00",
-		"homsteadForkBlock": "0x00",
+		"homesteadForkBlock": "0x00",
 		"daoHardforkBlock": "0xfffffffffffffff",
 		"EIP150ForkBlock": "0x00",
 		"EIP158ForkBlock": "0x00",
-		"metropolisForkBlock": "0xffffffffffffffffff",
+		"byzantiumForkBlock": "0xfffffffffffffff",
 		"networkID" : "0x01",
 		"chainID": "0x01",
 		"maximumExtraDataSize": "0x20",
@@ -38,8 +38,7 @@ R"E(
 		"minimumDifficulty": "0x020000",
 		"difficultyBoundDivisor": "0x0800",
 		"durationLimit": "0x0d",
-		"blockReward": "0x4563918244F40000",
-		"registrar" : ""
+		"blockReward": "0x4563918244F40000"
 	},
 	"genesis": {
 		"nonce": "0x0000000000000042",

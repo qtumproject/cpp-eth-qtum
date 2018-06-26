@@ -20,7 +20,9 @@
  *
  * The logging subsystem.
  */
-
+#ifdef QTUM_BUILD
+#define BOOST_LOG_DYN_LINK 1
+#endif
 #pragma once
 
 #include "CommonIO.h"

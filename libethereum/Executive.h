@@ -23,7 +23,6 @@
 #include <libethcore/Common.h>
 #include <libevm/VMFace.h>
 
-#include <json/json.h>
 #include <functional>
 
 namespace Json

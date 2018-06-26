@@ -27,7 +27,7 @@
 #include <libdevcore/CommonData.h>
 #include <libdevcore/SHA3.h>
 
-#include <evmc/evmc.h>
+#include "evmc.h"
 
 #include <boost/optional.hpp>
 #include <functional>
@@ -141,6 +141,7 @@ struct CallParameters
 class EnvInfo
 {
 public:
+    EnvInfo(LastBlockHashesFace const& _lh): m_headerInfo(), m_lastHashes(_lh) {}
     EnvInfo(BlockHeader const& _current, LastBlockHashesFace const& _lh, u256 const& _gasUsed):
         m_headerInfo(_current),
         m_lastHashes(_lh),
@@ -153,8 +154,7 @@ public:
         m_headerInfo.setGasLimit(_gasLimit);
     }
 
-    BlockHeader const& header() const { return m_headerInfo;  }
-
+    BlockHeader const& header() const { return m_headerInfo; }
     int64_t number() const { return m_headerInfo.number(); }
     Address const& author() const { return m_headerInfo.author(); }
     int64_t timestamp() const { return m_headerInfo.timestamp(); }
@@ -162,6 +162,13 @@ public:
     u256 const& gasLimit() const { return m_headerInfo.gasLimit(); }
     LastBlockHashesFace const& lastHashes() const { return m_lastHashes; }
     u256 const& gasUsed() const { return m_gasUsed; }
+
+    void setNumber(int64_t const& _v) { m_headerInfo.setNumber(_v); }
+    void setAuthor(Address const& _v) { m_headerInfo.setAuthor(_v); }
+    void setTimestamp(int64_t const& _v) { m_headerInfo.setTimestamp(_v); }
+    void setDifficulty(u256 const& _v) { m_headerInfo.setDifficulty(_v); }
+    void setGasLimit(int64_t _v) { m_headerInfo.setGasLimit(dev::u256(_v)); }
+    //void setLastHashes(LastBlockHashesFace&& _lh) { m_lastHashes = _lh; }
 
 private:
     BlockHeader m_headerInfo;

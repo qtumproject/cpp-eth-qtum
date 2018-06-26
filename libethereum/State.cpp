@@ -29,7 +29,6 @@
 #ifndef QTUM_BUILD
 #include <libdevcore/TrieHash.h>
 #endif
-#include <libevmcore/Instruction.h>
 #include <libethcore/Exceptions.h>
 #include <libevm/VMFactory.h>
 #include "Block.h"
@@ -37,12 +36,7 @@
 #include "Defaults.h"
 #include "ExtVM.h"
 #include "TransactionQueue.h"
-#include <libdevcore/Assertions.h>
 #include <libdevcore/DBImpl.h>
-#include <libdevcore/TrieHash.h>
-#include <libevm/VMFactory.h>
-#include <boost/filesystem.hpp>
-#include <boost/timer.hpp>
 
 using namespace std;
 using namespace dev;

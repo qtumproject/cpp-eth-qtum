@@ -130,6 +130,7 @@ void VM::caseCreate()
     updateMem(memNeed(initOff, initSize));
     updateIOGas();
 
+    if (endowment) BOOST_THROW_EXCEPTION(CreateWithValue());
     // Clear the return data buffer. This will not free the memory.
     m_returnData.clear();
 
@@ -137,7 +138,6 @@ void VM::caseCreate()
     m_context->fn_table->get_balance(&rawBalance, m_context, &m_message->destination);
     u256 balance = fromEvmC(rawBalance);
 
-    if (endowment) BOOST_THROW_EXCEPTION(CreateWithValue());
 
     if (balance >= endowment && m_message->depth < 1024)
     {

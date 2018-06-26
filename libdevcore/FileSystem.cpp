@@ -37,7 +37,7 @@
 using namespace std;
 using namespace dev;
 #ifndef QTUM_BUILD
-static_assert(BOOST_VERSION == 106300, "Wrong boost headers version");
+static_assert(BOOST_VERSION >= 106400, "Wrong boost headers version");
 #endif
 
 namespace fs = boost::filesystem;

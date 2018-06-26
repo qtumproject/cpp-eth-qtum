@@ -172,7 +172,8 @@ void ExtVM::suicide(Address _a)
 	if(!m_s.addressInUse(_a)){
 		m_sealEngine.deleteAddresses.insert(_a);
 	}
-	m_s.transferBalance(myAddress, _a, m_s.balance(myAddress));
+	
+	m_s.transferBalanceSuicide(myAddress, _a);
 	ExtVMFace::suicide(_a);
 }
 

@@ -82,27 +82,19 @@ SealEngineFace* SealEngineRegistrar::create(ChainOperationParams const& _params)
 
 EVMSchedule const& SealEngineBase::evmSchedule(u256 const& _blockNumber) const
 {
+	//////////////////////////////////////////////////////// // qtum
+	if (u256(0) == chainParams().EIP158ForkBlock && 
+		u256(0) == chainParams().EIP150ForkBlock &&
+		u256(0) == chainParams().homesteadForkBlock &&
+		 false  == chainParams().allowFutureBlocks){
+			return getQtumSchedule();
+	}
+	////////////////////////////////////////////////////////
 	return chainParams().scheduleForBlockNumber(_blockNumber);
 }
 
 u256 SealEngineBase::blockReward(u256 const& _blockNumber) const
 {
-	////////////////////////////////////////////////////////// // qtum
-	if (u256(0) == chainParams().u256Param("EIP158ForkBlock") && 
-		u256(0) == chainParams().u256Param("EIP150ForkBlock") &&
-		u256(0) == chainParams().u256Param("homsteadForkBlock")){
-			return getQtumSchedule();
-	}
-	//////////////////////////////////////////////////////////
-
-	if (_envInfo.number() >= chainParams().u256Param("metropolisForkBlock"))
-		return MetropolisSchedule;
-	if (_envInfo.number() >= chainParams().u256Param("EIP158ForkBlock"))
-		return EIP158Schedule;
-	else if (_envInfo.number() >= chainParams().u256Param("EIP150ForkBlock"))
-		return EIP150Schedule;
-	else if (_envInfo.number() >= chainParams().u256Param("homsteadForkBlock"))
-		return HomesteadSchedule;
-	else
-		return FrontierSchedule;
+	EVMSchedule const& schedule{evmSchedule(_blockNumber)};
+	return chainParams().blockReward(schedule);
 }

@@ -24,7 +24,7 @@ set(FILES
 )
 
 if (MSVC)
-    list(APPEND FILES util_win32.c io_win32.c mmap_win32.c)p
+    list(APPEND FILES util_win32.c io_win32.c mmap_win32.c)
 else()
     list(APPEND FILES io_posix.c)
 endif()

@@ -63,12 +63,11 @@ HunterGate(
 )
 
 project(cpp-ethereum)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 set(PROJECT_VERSION 1.3.0)
 
-if (NOT WIN32)
-    if (NOT EXISTS ${CMAKE_SOURCE_DIR}/evmjit/.git)
-        message(FATAL_ERROR "Git submodules not initialized, execute:\n  git submodule update --init")
-    endif()
+if (NOT EXISTS ${CMAKE_SOURCE_DIR}/evmjit/.git)
+    message(FATAL_ERROR "Git submodules not initialized, execute:\n  git submodule update --init")
 endif()
 
 cable_set_build_type(DEFAULT RelWithDebInfo CONFIGURATION_TYPES Debug;Release;RelWithDebInfo)
@@ -77,24 +76,13 @@ cable_add_buildinfo_library(PREFIX eth)
 
 set(CMAKE_SKIP_INSTALL_ALL_DEPENDENCY On)
 
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)### qtum
-
 include(EthCcache)
 include(EthOptions)
 include(EthCompilerSettings)
-if (NOT WIN32)
-    include(EthExecutableHelper)
-endif()
+include(EthExecutableHelper)
 include(EthDependencies)
 include(EthUtils)
 
-
-include(ProjectBoost)
-include(ProjectCryptopp)
-include(ProjectJsonCpp)
-if (NOT WIN32)
-    include(ProjectJsonRpcCpp)
-endif()
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 hunter_add_package(Boost COMPONENTS program_options filesystem system thread context fiber log)
@@ -112,23 +100,11 @@ find_package(cryptopp CONFIG REQUIRED)
 hunter_add_package(libjson-rpc-cpp)
 find_package(libjson-rpc-cpp CONFIG REQUIRED)
 
-hunter_add_package(libscrypt)
-find_package(libscrypt CONFIG REQUIRED)
-
 include(ProjectSecp256k1)
 include(ProjectLibFF)
 
 # Import binaryen library before hera to make it available also to testeth.
 include(hera/cmake/ProjectBinaryen.cmake)
-
-if (WIN32)
-    configure_project(MINIUPNPC)
-
-else()
-    configure_project(CPUID CURL EVMJIT FATDB MINIUPNPC ROCKSDB PARANOID TESTS VMTRACE)
-
-    add_subdirectory(eth)
-endif()
 
 find_package(Threads)
 
@@ -157,41 +133,15 @@ add_subdirectory(libethash)
 
 add_subdirectory(libethcore)
 add_subdirectory(libevm)
-
-add_subdirectory(libevmcore)
-if (NOT WIN32)
-    if (NOT EMSCRIPTEN)
-        add_subdirectory(libp2p)
-    endif()
-    add_subdirectory(libweb3jsonrpc)
-    add_subdirectory(libwebthree)
-    add_subdirectory(libwhisper)
-
 add_subdirectory(libethereum)
 add_subdirectory(libethashseal)
 
 add_subdirectory(libwebthree)
 add_subdirectory(libweb3jsonrpc)
 
-
-    if (EVMJIT)
-        add_subdirectory(evmjit)
-    endif()
-
-
-    if (TOOLS)
-        add_subdirectory(ethkey)
-        add_subdirectory(ethminer)
-        add_subdirectory(ethvm)
-        if (NOT EMSCRIPTEN)
-            add_subdirectory(rlp)
-            add_subdirectory(bench)
-        endif()
-    endif()
-
-    if (TESTS)
-	    add_subdirectory(test)
-    endif()
+if (EVMJIT)
+    add_subdirectory(evmjit)
+endif()
 
 add_subdirectory(eth)
 
@@ -204,9 +154,9 @@ endif()
 if (TESTS)
     enable_testing()
     add_subdirectory(test)
-
 endif()
 
+add_subdirectory(utils)
 
 if(WIN32)
     set(CPACK_GENERATOR ZIP)

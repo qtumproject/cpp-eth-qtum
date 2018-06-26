@@ -19,9 +19,9 @@
 #include "Exceptions.h"
 #include "Log.h"
 #ifndef QTUM_BUILD
-#include "BuildInfo.h"
-#endif
+//#include "BuildInfo.h"
 #include <eth-buildinfo.h>
+#endif
 
 using namespace std;
 
@@ -30,10 +30,9 @@ namespace dev
 #ifdef QTUM_BUILD
 #define ETH_PROJECT_VERSION "1.3.0"
 #endif
-char const* Version = ETH_PROJECT_VERSION;
+char const* Version = "1.3.0"; /////////изменить
 bytes const NullBytes;
 std::string const EmptyString;
-const u256 Invalid256 = ~(u256)0;
 
 void InvariantChecker::checkInvariants(HasInvariants const* _this, char const* _fn, char const* _file, int _line, bool _pre)
 {

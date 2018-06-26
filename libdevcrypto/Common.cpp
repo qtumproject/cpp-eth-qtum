@@ -30,7 +30,7 @@
 #include <cryptopp/pwdbased.h>
 #include <cryptopp/sha.h>
 #include <cryptopp/modes.h>
-#include <libscrypt.h>
+#include <libscrypt/libscrypt.h>
 #include <libdevcore/SHA3.h>
 #include <libdevcore/RLP.h>
 #include "AES.h"
@@ -356,11 +356,12 @@ bool ecdh::agree(Secret const& _s, Public const& _r, Secret& o_s) noexcept
 	//        secp256k1_pubkey as the internal data of Public.
 	std::array<byte, 33> compressedPoint;
 #ifdef QTUM_BUILD
-    r = secp256k1_ecdh(ctx, compressedPoint.data(), &rawPubkey, _s.data());
+	if (!secp256k1_ecdh(ctx, compressedPoint.data(), &rawPubkey, _s.data()))
+		return false;  // Invalid secret key.
 #else
-    r = secp256k1_ecdh_raw(ctx, compressedPoint.data(), &rawPubkey, _s.data());
+	if (!secp256k1_ecdh_raw(ctx, compressedPoint.data(), &rawPubkey, _s.data()))
+		return false;  // Invalid secret key.
 #endif
-	assert(r == 1);  // TODO: This should be "invalid secret key" exception.
 	std::copy(compressedPoint.begin() + 1, compressedPoint.end(), o_s.writable().data());
 	return true;
 }
