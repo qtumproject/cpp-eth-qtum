@@ -140,9 +140,9 @@ void LegacyVM::caseCreate()
 
 	updateMem(memNeed(initOff, initSize));
 	updateIOGas();
-
+#ifdef QTUM_BUILD
     if (endowment) BOOST_THROW_EXCEPTION(CreateWithValue());
-    
+#endif 
 	// Clear the return data buffer. This will not free the memory.
 	m_returnData.clear();
 

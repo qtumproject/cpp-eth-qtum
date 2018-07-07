@@ -27,7 +27,7 @@
 #include <libdevcore/CommonData.h>
 #include <libdevcore/SHA3.h>
 
-#include "evmc.h"
+#include <evmc/evmc.h>
 
 #include <boost/optional.hpp>
 #include <functional>
