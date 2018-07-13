@@ -168,7 +168,6 @@ public:
     void setTimestamp(int64_t const& _v) { m_headerInfo.setTimestamp(_v); }
     void setDifficulty(u256 const& _v) { m_headerInfo.setDifficulty(_v); }
     void setGasLimit(int64_t _v) { m_headerInfo.setGasLimit(dev::u256(_v)); }
-    //void setLastHashes(LastBlockHashesFace&& _lh) { m_lastHashes = _lh; }
 
 private:
     BlockHeader m_headerInfo;

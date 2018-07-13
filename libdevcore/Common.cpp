@@ -30,7 +30,7 @@ namespace dev
 #ifdef QTUM_BUILD
 #define ETH_PROJECT_VERSION "1.3.0"
 #endif
-char const* Version = "1.3.0"; /////////изменить
+char const* Version = "1.3.0";
 bytes const NullBytes;
 std::string const EmptyString;
 
