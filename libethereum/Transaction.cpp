@@ -70,6 +70,8 @@ TransactionException dev::eth::toTransactionException(Exception const& _e)
 		return TransactionException::OutOfStack;
 	if (!!dynamic_cast<StackUnderflow const*>(&_e))
 		return TransactionException::StackUnderflow;
+	if (!!dynamic_cast<CreateWithValue const*>(&_e))
+		return TransactionException::CreateWithValue;
 	return TransactionException::Unknown;
 }
 
@@ -91,6 +93,8 @@ std::ostream& dev::eth::operator<<(std::ostream& _out, TransactionException cons
 		case TransactionException::OutOfGas: _out << "OutOfGas"; break;
 		case TransactionException::OutOfStack: _out << "OutOfStack"; break;
 		case TransactionException::StackUnderflow: _out << "StackUnderflow"; break;
+		case TransactionException::CreateWithValue: _out << "CreateWithValue"; break;
+		case TransactionException::NoInformation: _out << "NoInformation"; break;
 		default: _out << "Unknown"; break;
 	}
 	return _out;

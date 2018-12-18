@@ -20,7 +20,9 @@
 #include <libethcore/Common.h>
 #include <libevm/VMFace.h>
 
+#ifndef QTUM_BUILD
 #include <json/json.h>
+#endif
 #include <functional>
 
 namespace Json
@@ -76,7 +78,9 @@ public:
 private:
     bool m_showMnemonics = false;
     std::vector<Instruction> m_lastInst;
+#ifndef QTUM_BUILD
     Json::Value m_trace;
+#endif
     DebugOptions m_options;
 };
 

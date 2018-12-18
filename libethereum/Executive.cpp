@@ -25,7 +25,9 @@
 #include <libevm/LegacyVM.h>
 #include <libevm/VMFactory.h>
 
+#ifndef QTUM_BUILD
 #include <json/json.h>
+#endif
 #include <boost/timer.hpp>
 
 #include <numeric>
@@ -60,9 +62,14 @@ std::string dumpStorage(ExtVM const& _ext)
 
 }  // namespace
 
+#ifdef QTUM_BUILD
+StandardTrace::StandardTrace()
+{}
+#else
 StandardTrace::StandardTrace():
     m_trace(Json::arrayValue)
 {}
+#endif
 
 bool changesMemory(Instruction _inst)
 {
@@ -88,6 +95,9 @@ bool changesStorage(Instruction _inst)
 void StandardTrace::operator()(uint64_t _steps, uint64_t PC, Instruction inst, bigint newMemSize,
     bigint gasCost, bigint gas, VMFace const* _vm, ExtVMFace const* voidExt)
 {
+#ifdef QTUM_BUILD
+    return;
+#else
     (void)_steps;
 
     ExtVM const& ext = dynamic_cast<ExtVM const&>(*voidExt);
@@ -161,11 +171,16 @@ void StandardTrace::operator()(uint64_t _steps, uint64_t PC, Instruction inst, b
         r["memexpand"] = toString(newMemSize);
 
     m_trace.append(r);
+#endif
 }
 
 std::string StandardTrace::styledJson() const
 {
+#ifdef QTUM_BUILD
+    return "";
+#else
     return Json::StyledWriter().write(m_trace);
+#endif
 }
 
 string StandardTrace::multilineTrace() const
@@ -348,6 +363,11 @@ bool Executive::call(CallParameters const& _p, u256 const& _gasPrice, Address co
                 m_depth, false, _p.staticCall);
         }
     }
+
+    //////////////////////////////////////////////// // qtum
+    if(!m_s.addressInUse(_p.receiveAddress))
+        m_sealEngine.deleteAddresses.insert(_p.receiveAddress);
+    ////////////////////////////////////////////////
 
     // Transfer ether.
     m_s.transferBalance(_p.senderAddress, _p.receiveAddress, _p.valueTransfer);

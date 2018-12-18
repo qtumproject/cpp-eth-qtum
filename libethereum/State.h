@@ -231,7 +231,7 @@ public:
 
     /// Add some amount to balance.
     /// Will initialise the address if it has never been used.
-    void addBalance(Address const& _id, u256 const& _amount);
+    virtual void addBalance(Address const& _id, u256 const& _amount); // qtum
 
     /// Subtract the @p _value amount from the balance of @p _addr account.
     /// @throws NotEnoughCash if the balance of the account is less than the
@@ -248,7 +248,7 @@ public:
      * @param _to Account to which @a _value will be added.
      * @param _value Amount to be transferred.
      */
-    void transferBalance(Address const& _from, Address const& _to, u256 const& _value) { subBalance(_from, _value); addBalance(_to, _value); }
+    virtual void transferBalance(Address const& _from, Address const& _to, u256 const& _value) { subBalance(_from, _value); addBalance(_to, _value); }
 
     /// Get the root of the storage of an account.
     h256 storageRoot(Address const& _contract) const;
@@ -275,7 +275,7 @@ public:
     void setCode(Address const& _address, bytes&& _code);
 
     /// Delete an account (used for processing suicides).
-    void kill(Address _a);
+    virtual void kill(Address _a);
 
     /// Get the storage of an account.
     /// @note This is expensive. Don't use it unless you need to.
@@ -330,7 +330,9 @@ public:
 
     ChangeLog const& changeLog() const { return m_changeLog; }
 
-private:
+    virtual ~State(){}
+
+protected:
     /// Turns all "touched" empty accounts into non-alive accounts.
     void removeEmptyAccounts();
 
