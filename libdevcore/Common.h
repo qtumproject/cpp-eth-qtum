@@ -116,6 +116,7 @@ using bytesSec = secure_vector<byte>;
 
 // Numeric types.
 using bigint = boost::multiprecision::number<boost::multiprecision::cpp_int_backend<>>;
+using u8 =  boost::multiprecision::number<boost::multiprecision::cpp_int_backend<8, 8, boost::multiprecision::unsigned_magnitude, boost::multiprecision::unchecked, void>>;
 using u64 =  boost::multiprecision::number<boost::multiprecision::cpp_int_backend<64, 64, boost::multiprecision::unsigned_magnitude, boost::multiprecision::unchecked, void>>;
 using u128 =  boost::multiprecision::number<boost::multiprecision::cpp_int_backend<128, 128, boost::multiprecision::unsigned_magnitude, boost::multiprecision::unchecked, void>>;
 using u256 =  boost::multiprecision::number<boost::multiprecision::cpp_int_backend<256, 256, boost::multiprecision::unsigned_magnitude, boost::multiprecision::unchecked, void>>;
@@ -186,6 +187,17 @@ template <size_t n> inline u256 exp10()
 template <> inline u256 exp10<0>()
 {
     return u256(1);
+}
+
+/// Converts given multiprecision number to standard number type
+template <typename T> uint64_t toUint64(T _u)
+{
+    return static_cast<uint64_t>(u64(_u));
+}
+
+template <typename T> uint8_t toUint8(T _u)
+{
+    return static_cast<uint8_t>(u8(_u));
 }
 
 /// @returns the absolute distance between _a and _b.
@@ -267,7 +279,7 @@ private:
 
 #define DEV_TIMED(S) for (::std::pair<::dev::TimerHelper, bool> __eth_t(S, true); __eth_t.second; __eth_t.second = false)
 #define DEV_TIMED_SCOPE(S) ::dev::TimerHelper __eth_t(S)
-#if defined(_WIN32)
+#if defined(_MSC_VER)
 #define DEV_TIMED_FUNCTION DEV_TIMED_SCOPE(__FUNCSIG__)
 #else
 #define DEV_TIMED_FUNCTION DEV_TIMED_SCOPE(__PRETTY_FUNCTION__)
@@ -275,7 +287,7 @@ private:
 
 #define DEV_TIMED_ABOVE(S, MS) for (::std::pair<::dev::TimerHelper, bool> __eth_t(::dev::TimerHelper(S, MS), true); __eth_t.second; __eth_t.second = false)
 #define DEV_TIMED_SCOPE_ABOVE(S, MS) ::dev::TimerHelper __eth_t(S, MS)
-#if defined(_WIN32)
+#if defined(_MSC_VER)
 #define DEV_TIMED_FUNCTION_ABOVE(MS) DEV_TIMED_SCOPE_ABOVE(__FUNCSIG__, MS)
 #else
 #define DEV_TIMED_FUNCTION_ABOVE(MS) DEV_TIMED_SCOPE_ABOVE(__PRETTY_FUNCTION__, MS)
