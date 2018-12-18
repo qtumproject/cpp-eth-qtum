@@ -19,6 +19,10 @@
 
 #include <cstdint>
 
+#ifdef MSIZE
+#undef MSIZE
+#endif
+
 namespace dev
 {
 namespace eth
