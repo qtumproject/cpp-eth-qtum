@@ -45,6 +45,9 @@ class EnvInfo;
 class SealEngineFace
 {
 public:
+	SealEngineFace():
+		m_useQtumSchedule(false)
+	{}
 	virtual ~SealEngineFace() {}
 
     virtual unsigned revision() const { return 0; }
@@ -85,6 +88,10 @@ public:
 	virtual std::pair<bool, bytes> executePrecompiled(Address const& _a, bytesConstRef _in, u256 const&) const { return m_params.precompiled.at(_a).execute(_in); }
 
 ////////////////////////////////////////////////////////////// // qtum
+	bool useQtumSchedule() const { return m_useQtumSchedule; }
+
+	void setUseQtumSchedule(bool _useQtumSchedule) {m_useQtumSchedule = _useQtumSchedule; }
+
 	void setQtumSchedule(EVMSchedule _qtumSchedule) const { qtumSchedule = _qtumSchedule; }
 
 	EVMSchedule& getQtumSchedule() const { return qtumSchedule; }
@@ -106,6 +113,7 @@ private:
 	mutable EVMSchedule qtumSchedule; // qtum
 
 	ChainOperationParams m_params;
+	bool m_useQtumSchedule;
 };
 
 class SealEngineBase: public SealEngineFace

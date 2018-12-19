@@ -165,7 +165,7 @@ SealEngineFace* SealEngineRegistrar::create(ChainOperationParams const& _params)
 
 EVMSchedule const& SealEngineBase::evmSchedule(u256 const& _blockNumber) const
 {
-    return chainParams().scheduleForBlockNumber(_blockNumber);
+    return useQtumSchedule() ? getQtumSchedule() : chainParams().scheduleForBlockNumber(_blockNumber);
 }
 
 u256 SealEngineBase::blockReward(u256 const& _blockNumber) const
