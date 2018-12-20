@@ -63,7 +63,9 @@ public:
     void setShowMnemonics() { m_showMnemonics = true; }
     void setOptions(DebugOptions _options) { m_options = _options; }
 
+#ifndef QTUM_BUILD
     Json::Value jsonValue() const { return m_trace; }
+#endif
     std::string styledJson() const;
     std::string multilineTrace() const;
 

@@ -185,6 +185,9 @@ std::string StandardTrace::styledJson() const
 
 string StandardTrace::multilineTrace() const
 {
+#ifdef QTUM_BUILD
+    return "";
+#else
     if (m_trace.empty())
         return {};
 
@@ -192,6 +195,7 @@ string StandardTrace::multilineTrace() const
     return std::accumulate(std::next(m_trace.begin()), m_trace.end(),
         Json::FastWriter().write(m_trace[0]),
         [](std::string a, Json::Value b) { return a + Json::FastWriter().write(b); });
+#endif
 }
 
 Executive::Executive(Block& _s, BlockChain const& _bc, unsigned _level):
