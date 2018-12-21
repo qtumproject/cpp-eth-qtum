@@ -23,19 +23,13 @@
 #include <windows.h>
 #endif
 
-#ifndef QTUM_BUILD
 #include <aleth/buildinfo.h>
-#endif
 
 using namespace std;
 
 namespace dev
 {
-#ifdef QTUM_BUILD
-char const* Version = "1.5.0";
-#else
 char const* Version = aleth_get_buildinfo()->project_version;
-#endif
 bytes const NullBytes;
 std::string const EmptyString;
 
