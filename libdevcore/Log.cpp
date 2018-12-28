@@ -25,6 +25,8 @@
 #include <pthread.h>
 #endif
 
+#ifndef QTUM_BUILD
+
 #include <boost/core/null_deleter.hpp>
 #include <boost/log/attributes/clock.hpp>
 #include <boost/log/attributes/function.hpp>
@@ -106,9 +108,6 @@ void formatter(boost::log::record_view const& _rec, boost::log::formatting_ostre
 
 std::string getThreadName()
 {
-#ifdef QTUM_BUILD
-    return "";
-#else
 #if defined(__GLIBC__) || defined(__APPLE__)
     char buffer[128];
     pthread_getname_np(pthread_self(), buffer, 127);
@@ -117,19 +116,16 @@ std::string getThreadName()
 #else
     return g_logThreadName.m_name.get() ? *g_logThreadName.m_name.get() : "<unknown>";
 #endif
-#endif
 }
 
 void setThreadName(std::string const& _n)
 {
-#ifndef QTUM_BUILD
 #if defined(__GLIBC__)
     pthread_setname_np(pthread_self(), _n.c_str());
 #elif defined(__APPLE__)
     pthread_setname_np(_n.c_str());
 #else
     g_logThreadName.m_name.reset(new std::string(_n));
-#endif
 #endif
 }
 
@@ -165,3 +161,34 @@ void setupLogging(LoggingOptions const& _options)
 }
 
 }  // namespace dev
+
+#else
+
+namespace dev
+{
+
+int g_logVerbosity = 5;
+Logger g_errorLogger(VerbosityError, "error");
+Logger g_warnLogger(VerbosityWarning, "warn");
+Logger g_noteLogger(VerbosityInfo, "info");
+Logger g_debugLogger(VerbosityDebug, "debug");
+Logger g_traceLogger(VerbosityTrace, "trace");
+
+void setThreadName(std::string const&)
+{}
+
+std::string getThreadName()
+{
+    return "";
+}
+
+void simpleDebugOut(std::string const& _s, char const*)
+{
+    std::cerr << _s << std::endl << std::flush;
+}
+
+std::function<void(std::string const&, char const*)> g_logPost = simpleDebugOut;
+
+}  // namespace
+
+#endif
