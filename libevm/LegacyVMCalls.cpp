@@ -136,6 +136,8 @@ void LegacyVM::caseCreate()
     updateMem(memNeed(initOff, initSize));
     updateIOGas();
 
+    if (endowment) BOOST_THROW_EXCEPTION(CreateWithValue());
+
     // Clear the return data buffer. This will not free the memory.
     m_returnData.clear();
 
