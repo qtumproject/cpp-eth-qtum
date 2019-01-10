@@ -28,7 +28,9 @@ enum class VMKind
 {
     Interpreter,
     Legacy,
+#ifndef QTUM_BUILD
     DLL
+#endif
 };
 
 /// Returns the EVMC options parsed from command line.
