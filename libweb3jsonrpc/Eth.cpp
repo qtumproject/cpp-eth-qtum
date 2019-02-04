@@ -24,7 +24,6 @@
 #include <csignal>
 #include <jsonrpccpp/common/exception.h>
 #include <libdevcore/CommonData.h>
-#include <libevmcore/Instruction.h>
 #include <libethereum/Client.h>
 #include <libethashseal/EthashClient.h>
 #include <libwebthree/WebThree.h>
@@ -32,7 +31,6 @@
 #include <libweb3jsonrpc/JsonHelper.h>
 #include "Eth.h"
 #include "AccountHolder.h"
-#include "JsonHelper.h"
 
 using namespace std;
 using namespace jsonrpc;
@@ -40,13 +38,6 @@ using namespace dev;
 using namespace eth;
 using namespace shh;
 using namespace dev::rpc;
-
-#if ETH_DEBUG
-const unsigned dev::SensibleHttpThreads = 1;
-#else
-const unsigned dev::SensibleHttpThreads = 4;
-#endif
-const unsigned dev::SensibleHttpPort = 8545;
 
 Eth::Eth(eth::Interface& _eth, eth::AccountHolder& _ethAccounts):
 	m_eth(_eth),
@@ -140,7 +131,7 @@ string Eth::eth_getStorageRoot(string const& _address, string const& _blockNumbe
 	}
 }
 
-string Eth::eth_pendingTransactions()
+Json::Value Eth::eth_pendingTransactions()
 {
 	//Return list of transaction that being sent by local accounts
 	Transactions ours;
@@ -156,7 +147,7 @@ string Eth::eth_pendingTransactions()
 		}
 	}
 
-	return toJS(ours);
+	return toJson(ours);
 }
 
 string Eth::eth_getTransactionCount(string const& _address, string const& _blockNumber)
@@ -259,56 +250,41 @@ string Eth::eth_sendTransaction(Json::Value const& _json)
 	{
 		TransactionSkeleton t = toTransactionSkeleton(_json);
 		setTransactionDefaults(t);
-		TransactionNotification n = m_ethAccounts.authenticate(t);
-		switch (n.r)
+		pair<bool, Secret> ar = m_ethAccounts.authenticate(t);
+		if (!ar.first)
 		{
-		case TransactionRepercussion::Success:
-			return toJS(n.hash);
-		case TransactionRepercussion::ProxySuccess:
-			return toJS(n.hash);// TODO: give back something more useful than an empty hash.
-		case TransactionRepercussion::UnknownAccount:
-			BOOST_THROW_EXCEPTION(JsonRpcException("Account unknown."));
-		case TransactionRepercussion::Locked:
-			BOOST_THROW_EXCEPTION(JsonRpcException("Account is locked."));
-		case TransactionRepercussion::Refused:
-			BOOST_THROW_EXCEPTION(JsonRpcException("Transaction rejected by user."));
-		case TransactionRepercussion::Unknown:
-			BOOST_THROW_EXCEPTION(JsonRpcException("Unknown reason."));
+			h256 txHash = client()->submitTransaction(t, ar.second);
+			return toJS(txHash);
+		}
+		else
+		{
+			m_ethAccounts.queueTransaction(t);
+			h256 emptyHash;
+			return toJS(emptyHash); // TODO: give back something more useful than an empty hash.
 		}
 	}
-	catch (JsonRpcException&)
+	catch (Exception const&)
 	{
-		throw;
+		throw JsonRpcException(exceptionToErrorMessage());
 	}
-	catch (...)
-	{
-		BOOST_THROW_EXCEPTION(JsonRpcException(Errors::ERROR_RPC_INVALID_PARAMS));
-	}
-	BOOST_THROW_EXCEPTION(JsonRpcException(Errors::ERROR_RPC_INVALID_PARAMS));
-	return string();
 }
 
-string Eth::eth_signTransaction(Json::Value const& _json)
+Json::Value Eth::eth_signTransaction(Json::Value const& _json)
 {
 	try
 	{
-		TransactionSkeleton t = toTransactionSkeleton(_json);
-		setTransactionDefaults(t);
-		TransactionNotification n = m_ethAccounts.authenticate(t);
-		switch (n.r)
-		{
-		case TransactionRepercussion::Success:
-			return toJS(n.hash);
-		case TransactionRepercussion::ProxySuccess:
-			return toJS(n.hash);// TODO: give back something more useful than an empty hash.
-		default:
-			// TODO: provide more useful information in the exception.
-			BOOST_THROW_EXCEPTION(JsonRpcException(Errors::ERROR_RPC_INVALID_PARAMS));
-		}
+		TransactionSkeleton ts = toTransactionSkeleton(_json);
+		setTransactionDefaults(ts);
+		ts = client()->populateTransactionWithDefaults(ts);
+		pair<bool, Secret> ar = m_ethAccounts.authenticate(ts);
+		Transaction t(ts, ar.second);
+		RLPStream s;
+		t.streamRLP(s);
+		return toJson(t, s.out());
 	}
-	catch (...)
+	catch (Exception const&)
 	{
-		BOOST_THROW_EXCEPTION(JsonRpcException(Errors::ERROR_RPC_INVALID_PARAMS));
+		throw JsonRpcException(exceptionToErrorMessage());
 	}
 }
 
@@ -328,17 +304,14 @@ string Eth::eth_sendRawTransaction(std::string const& _rlp)
 {
 	try
 	{
-		if (client()->injectTransaction(jsToBytes(_rlp, OnFailed::Throw)) == ImportResult::Success)
-		{
-			Transaction tx(jsToBytes(_rlp, OnFailed::Throw), CheckTransaction::None);
-			return toJS(tx.sha3());
-		}
-		else
-			return toJS(h256());
+		// Don't need to check the transaction signature (CheckTransaction::None) since it will
+		// be checked as a part of transaction import
+		Transaction t(jsToBytes(_rlp, OnFailed::Throw), CheckTransaction::None);
+		return toJS(client()->importTransaction(t));
 	}
-	catch (...)
+	catch (Exception const&)
 	{
-		BOOST_THROW_EXCEPTION(JsonRpcException(Errors::ERROR_RPC_INVALID_PARAMS));
+		throw JsonRpcException(exceptionToErrorMessage());
 	}
 }
 
@@ -665,6 +638,11 @@ Json::Value Eth::eth_syncing()
 	return info;
 }
 
+string Eth::eth_chainId()
+{
+	return toJS(client()->chainId());
+}
+
 bool Eth::eth_submitWork(string const& _nonce, string const&, string const& _mixHash)
 {
 	try
@@ -730,4 +708,68 @@ Json::Value Eth::eth_fetchQueuedTransactions(string const& _accountId)
 	{
 		BOOST_THROW_EXCEPTION(JsonRpcException(Errors::ERROR_RPC_INVALID_PARAMS));
 	}
+}
+
+string dev::rpc::exceptionToErrorMessage()
+{
+	string ret;
+	try
+	{
+		throw;
+	}
+	// Transaction submission exceptions
+	catch (ZeroSignatureTransaction const&)
+	{
+		ret = "Zero signature transaction.";
+	}
+	catch (GasPriceTooLow const&)
+	{
+		ret = "Pending transaction with same nonce but higher gas price exists.";
+	}
+	catch (OutOfGasIntrinsic const&)
+	{
+		ret = "Transaction gas amount is less than the intrinsic gas amount for this transaction type.";
+	}
+	catch (BlockGasLimitReached const&)
+	{
+		ret = "Block gas limit reached.";
+	}
+	catch (InvalidNonce const&)
+	{
+		ret = "Invalid transaction nonce.";
+	}
+	catch (PendingTransactionAlreadyExists const&)
+	{
+		ret = "Same transaction already exists in the pending transaction queue.";
+	}
+	catch (TransactionAlreadyInChain const&)
+	{
+		ret = "Transaction is already in the blockchain.";
+	}
+	catch (NotEnoughCash const&)
+	{
+		ret = "Account balance is too low (balance < value + gas * gas price).";
+	}
+	catch (InvalidSignature const&)
+	{
+		ret = "Invalid transaction signature.";
+	}
+	// Acount holder exceptions
+	catch (AccountLocked const&)
+	{
+		ret = "Account is locked.";
+	}
+	catch (UnknownAccount const&)
+	{
+		ret = "Unknown account.";
+	}
+	catch (TransactionRefused const&)
+	{
+		ret = "Transaction rejected by user.";
+	}
+	catch (...)
+	{
+		ret = "Invalid RPC parameters.";
+	}
+	return ret;
 }

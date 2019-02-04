@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <vector>
 #include <string>
+#include <atomic>
 
 #ifdef __INTEL_COMPILER
 #pragma warning(disable:597) //will not be called for implicit or explicit conversions
@@ -35,9 +36,6 @@ public:
 	vector_ref(typename std::conditional<std::is_const<_T>::value, std::vector<typename std::remove_const<_T>::type> const*, std::vector<_T>*>::type _data): m_data(_data->data()), m_count(_data->size()) {}
 	/// Creates a new vector_ref pointing to the data part of a string (given as reference).
 	vector_ref(typename std::conditional<std::is_const<_T>::value, std::string const&, std::string&>::type _data): m_data(reinterpret_cast<_T*>(_data.data())), m_count(_data.size() / sizeof(_T)) {}
-#if DEV_LDB
-	vector_ref(ldb::Slice const& _s): m_data(reinterpret_cast<_T*>(_s.data())), m_count(_s.size() / sizeof(_T)) {}
-#endif
 	explicit operator bool() const { return m_data && m_count; }
 
 	bool contentsEqual(std::vector<mutable_value_type> const& _c) const { if (!m_data || m_count == 0) return _c.empty(); else return _c.size() == m_count && !memcmp(_c.data(), m_data, m_count * sizeof(_T)); }
@@ -73,7 +71,7 @@ public:
 	/// @note adapted from OpenSSL's implementation.
 	void cleanse()
 	{
-		static unsigned char s_cleanseCounter = 0;
+		static std::atomic<unsigned char> s_cleanseCounter{0u};
 		uint8_t* p = (uint8_t*)begin();
 		size_t const len = (uint8_t*)end() - p;
 		size_t loop = len;
@@ -100,10 +98,6 @@ public:
 
 	bool operator==(vector_ref<_T> const& _cmp) const { return m_data == _cmp.m_data && m_count == _cmp.m_count; }
 	bool operator!=(vector_ref<_T> const& _cmp) const { return !operator==(_cmp); }
-
-#if DEV_LDB
-	operator ldb::Slice() const { return ldb::Slice((char const*)m_data, m_count * sizeof(_T)); }
-#endif
 
 	void reset() { m_data = nullptr; m_count = 0; }
 

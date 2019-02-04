@@ -1,18 +1,18 @@
 /*
-	This file is part of cpp-ethereum.
+    This file is part of cpp-ethereum.
 
-	cpp-ethereum is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
+    cpp-ethereum is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-	cpp-ethereum is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
+    cpp-ethereum is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
 
-	You should have received a copy of the GNU General Public License
-	along with cpp-ethereum.  If not, see <http://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU General Public License
+    along with cpp-ethereum.  If not, see <http://www.gnu.org/licenses/>.
 */
 /** @file Exceptions.h
  * @author Gav Wood <i@gavwood.com>
@@ -39,6 +39,7 @@ using errinfo_target = boost::error_info<struct tag_target, h256>;
 using errinfo_seedHash = boost::error_info<struct tag_seedHash, h256>;
 using errinfo_mixHash = boost::error_info<struct tag_mixHash, h256>;
 using errinfo_ethashResult = boost::error_info<struct tag_ethashResult, std::tuple<h256, h256>>;
+using errinfo_importResult = boost::error_info<struct tag_importResult, ImportResult>;
 using BadFieldError = boost::tuple<errinfo_field, errinfo_data>;
 
 DEV_SIMPLE_EXCEPTION(OutOfGasBase);
@@ -51,6 +52,7 @@ DEV_SIMPLE_EXCEPTION(FeeTooSmall);
 DEV_SIMPLE_EXCEPTION(TooMuchGasUsed);
 DEV_SIMPLE_EXCEPTION(ExtraDataTooBig);
 DEV_SIMPLE_EXCEPTION(ExtraDataIncorrect);
+DEV_SIMPLE_EXCEPTION(TransactionIsUnsigned);
 DEV_SIMPLE_EXCEPTION(InvalidSignature);
 DEV_SIMPLE_EXCEPTION(InvalidTransactionFormat);
 DEV_SIMPLE_EXCEPTION(InvalidBlockFormat);
@@ -74,12 +76,37 @@ DEV_SIMPLE_EXCEPTION(InvalidBlockNonce);
 DEV_SIMPLE_EXCEPTION(InvalidParentHash);
 DEV_SIMPLE_EXCEPTION(InvalidUncleParentHash);
 DEV_SIMPLE_EXCEPTION(InvalidNumber);
+DEV_SIMPLE_EXCEPTION(InvalidZeroSignatureTransaction);
+DEV_SIMPLE_EXCEPTION(InvalidTransactionReceiptFormat);
+DEV_SIMPLE_EXCEPTION(TransactionReceiptVersionError);
+DEV_SIMPLE_EXCEPTION(PendingTransactionAlreadyExists);
+DEV_SIMPLE_EXCEPTION(TransactionAlreadyInChain);
 DEV_SIMPLE_EXCEPTION(BlockNotFound);
 DEV_SIMPLE_EXCEPTION(UnknownParent);
+DEV_SIMPLE_EXCEPTION(AddressAlreadyUsed);
+DEV_SIMPLE_EXCEPTION(ZeroSignatureTransaction);
+DEV_SIMPLE_EXCEPTION(UnknownTransactionValidationError);
+DEV_SIMPLE_EXCEPTION(UnknownError);
 
+DEV_SIMPLE_EXCEPTION(InvalidDatabaseKind);
 DEV_SIMPLE_EXCEPTION(DatabaseAlreadyOpen);
 DEV_SIMPLE_EXCEPTION(DAGCreationFailure);
 DEV_SIMPLE_EXCEPTION(DAGComputeFailure);
 
+DEV_SIMPLE_EXCEPTION(UnsupportedSnapshotManifestVersion);
+DEV_SIMPLE_EXCEPTION(InvalidSnapshotManifest);
+DEV_SIMPLE_EXCEPTION(StateTrieReconstructionFailed);
+DEV_SIMPLE_EXCEPTION(InvalidStateChunkData);
+DEV_SIMPLE_EXCEPTION(InvalidBlockChunkData);
+DEV_SIMPLE_EXCEPTION(AccountAlreadyImported);
+DEV_SIMPLE_EXCEPTION(InvalidWarpStatusPacket);
+DEV_SIMPLE_EXCEPTION(FailedToDownloadManifest);
+DEV_SIMPLE_EXCEPTION(FailedToDownloadDaoForkBlockHeader);
+
+DEV_SIMPLE_EXCEPTION(AccountLocked);
+DEV_SIMPLE_EXCEPTION(TransactionRefused);
+DEV_SIMPLE_EXCEPTION(UnknownAccount);
+
+DEV_SIMPLE_EXCEPTION(PeerDisconnected);
 }
 }

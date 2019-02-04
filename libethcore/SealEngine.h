@@ -45,18 +45,19 @@ class EnvInfo;
 class SealEngineFace
 {
 public:
+	SealEngineFace()
+	{}
 	virtual ~SealEngineFace() {}
 
-	virtual std::string name() const = 0;
-	virtual unsigned revision() const { return 0; }
-	virtual unsigned sealFields() const { return 0; }
-	virtual bytes sealRLP() const { return bytes(); }
+    virtual unsigned revision() const { return 0; }
+    virtual unsigned sealFields() const { return 0; }
+    virtual bytes sealRLP() const { return bytes(); }
 	virtual StringHashMap jsInfo(BlockHeader const&) const { return StringHashMap(); }
 
 	/// Don't forget to call Super::verify when subclassing & overriding.
 	virtual void verify(Strictness _s, BlockHeader const& _bi, BlockHeader const& _parent = BlockHeader(), bytesConstRef _block = bytesConstRef()) const;
 	/// Additional verification for transactions in blocks.
-	virtual void verifyTransaction(ImportRequirements::value _ir, TransactionBase const& _t, BlockHeader const& _bi) const;
+	virtual void verifyTransaction(ImportRequirements::value _ir, TransactionBase const& _t, BlockHeader const& _header, u256 const& _startGasUsed) const;
 	/// Don't forget to call Super::populateFromParent when subclassing & overriding.
 	virtual void populateFromParent(BlockHeader& _bi, BlockHeader const& _parent) const;
 
@@ -75,7 +76,8 @@ public:
 	ChainOperationParams const& chainParams() const { return m_params; }
 	void setChainParams(ChainOperationParams const& _params) { m_params = _params; }
 	SealEngineFace* withChainParams(ChainOperationParams const& _params) { setChainParams(_params); return this; }
-	virtual EVMSchedule const& evmSchedule(EnvInfo const&) const = 0;
+	virtual EVMSchedule const& evmSchedule(u256 const& _blockNumber) const = 0;
+	virtual u256 blockReward(u256 const& _blockNumber) const = 0;
 
 	virtual bool isPrecompiled(Address const& _a, u256 const& _blockNumber) const
 	{
@@ -111,15 +113,14 @@ private:
 class SealEngineBase: public SealEngineFace
 {
 public:
-	void generateSeal(BlockHeader const& _bi) override
-	{
-		RLPStream ret;
-		_bi.streamRLP(ret);
-		if (m_onSealGenerated)
-			m_onSealGenerated(ret.out());
-	}
-	void onSealGenerated(std::function<void(bytes const&)> const& _f) override { m_onSealGenerated = _f; }
-	EVMSchedule const& evmSchedule(EnvInfo const&) const override;
+    enum
+    {
+        MixHashField = 0,
+        NonceField = 1
+    };
+    void onSealGenerated(std::function<void(bytes const&)> const& _f) override { m_onSealGenerated = _f; }
+	EVMSchedule const& evmSchedule(u256 const& _blockNumber) const override;
+	u256 blockReward(u256 const& _blockNumber) const override;
 
 protected:
 	std::function<void(bytes const& s)> m_onSealGenerated;
@@ -150,9 +151,17 @@ private:
 class NoProof: public eth::SealEngineBase
 {
 public:
-	std::string name() const override { return "NoProof"; }
-	static void init();
+    static std::string name() { return "NoProof"; }
+    static void init();
+    void generateSeal(BlockHeader const& _bi) override;
+    void populateFromParent(BlockHeader& _bi, BlockHeader const& _parent) const override;
+    void verify(Strictness _s, BlockHeader const& _bi, BlockHeader const& _parent, bytesConstRef _block) const override;
 };
 
+u256 calculateEthashDifficulty(
+    ChainOperationParams const& _chainParams, BlockHeader const& _bi, BlockHeader const& _parent);
+
+u256 calculateGasLimit(ChainOperationParams const& _chainParams, BlockHeader const& _bi,
+    u256 const& _gasFloorTarget = Invalid256);
 }
 }

@@ -1,43 +1,29 @@
-/*
-	This file is part of cpp-ethereum.
+/* Aleth: Ethereum C++ client, tools and libraries.
+ * Copyright 2018 Aleth Autors.
+ * Licensed under the GNU General Public License, Version 3. See the LICENSE file.
+ */
 
-	cpp-ethereum is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-
-	cpp-ethereum is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with cpp-ethereum.  If not, see <http://www.gnu.org/licenses/>.
-*/
-/** @file RLP.h
- * @author Gav Wood <i@gavwood.com>
- * @date 2014
- *
- * RLP (de-)serialisation.
+/**
+ * Recursive Linear-Prefix serialization / deserialization.
+ * @file
  */
 
 #pragma once
 
-#include <vector>
-#include <array>
-#include <exception>
-#include <iostream>
-#include <iomanip>
-#include "vector_ref.h"
-#include "Common.h"
 #include "Exceptions.h"
 #include "FixedHash.h"
+#include "vector_ref.h"
+
+#include <array>
+#include <exception>
+#include <iomanip>
+#include <iosfwd>
+#include <vector>
 
 namespace dev
 {
 
 class RLP;
-using RLPs = std::vector<RLP>;
 
 template <class _T> struct intTraits { static const unsigned maxSize = sizeof(_T); };
 template <> struct intTraits<u160> { static const unsigned maxSize = 20; };
@@ -56,10 +42,7 @@ static const byte c_rlpListIndLenZero = c_rlpListStart + c_rlpListImmLenCount - 
 template <class T> struct Converter { static T convert(RLP const&, int) { BOOST_THROW_EXCEPTION(BadCast()); } };
 
 /**
- * @brief Class for interpreting Recursive Linear-Prefix Data.
- * @by Gav Wood, 2013
- *
- * Class for reading byte arrays of data in RLP format.
+ * Class for interpreting Recursive Linear-Prefix Data.
  */
 class RLP
 {
@@ -177,7 +160,6 @@ public:
 	/// Best-effort conversion operators.
 	explicit operator std::string() const { return toString(); }
 	explicit operator bytes() const { return toBytes(); }
-	explicit operator RLPs() const { return toList(); }
 	explicit operator uint8_t() const { return toInt<uint8_t>(); }
 	explicit operator uint16_t() const { return toInt<uint16_t>(); }
 	explicit operator uint32_t() const { return toInt<uint32_t>(); }
@@ -209,10 +191,10 @@ public:
 			ret.reserve(itemCount());
 			for (auto const& i: *this)
 				ret.push_back(i.convert<T>(_flags));
-		 }
+		}
 		else if (_flags & ThrowOnFail)
 			BOOST_THROW_EXCEPTION(BadCast());
-		 return ret;
+		return ret;
 	}
 
 	template <class T>
@@ -271,7 +253,7 @@ public:
 		return ret;
 	}
 
-	/// Converts to int of type given; if isString(), decodes as big-endian bytestream. @returns 0 if not an int or string.
+	/// Converts to int of type given; if isData(), decodes as big-endian bytestream. @returns 0 if not an int or data.
 	template <class _T = unsigned> _T toInt(int _flags = Strict) const
 	{
 		requireGood();
@@ -295,6 +277,14 @@ public:
 		return fromBigEndian<_T>(p);
 	}
 
+	int64_t toPositiveInt64(int _flags = Strict) const
+	{
+		int64_t i = toInt<int64_t>(_flags);
+		if ((_flags & ThrowOnFail) && i < 0)
+			BOOST_THROW_EXCEPTION(BadCast());
+		return i;
+	}
+
 	template <class _N> _N toHash(int _flags = Strict) const
 	{
 		requireGood();
@@ -313,9 +303,6 @@ public:
 		memcpy(ret.data() + _N::size - s, p.data(), s);
 		return ret;
 	}
-
-	/// Converts to RLPs collection object. Useful if you need random access to sub items or will iterate over multiple times.
-	RLPs toList(int _flags = Strict) const;
 
 	/// @returns the data payload. Valid for all types.
 	bytesConstRef payload() const { auto l = length(); if (l > m_data.size()) BOOST_THROW_EXCEPTION(BadRLP()); return m_data.cropped(payloadOffset(), l); }
@@ -360,7 +347,6 @@ private:
 
 template <> struct Converter<std::string> { static std::string convert(RLP const& _r, int _flags) { return _r.toString(_flags); } };
 template <> struct Converter<bytes> { static bytes convert(RLP const& _r, int _flags) { return _r.toBytes(_flags); } };
-template <> struct Converter<RLPs> { static RLPs convert(RLP const& _r, int _flags) { return _r.toList(_flags); } };
 template <> struct Converter<uint8_t> { static uint8_t convert(RLP const& _r, int _flags) { return _r.toInt<uint8_t>(_flags); } };
 template <> struct Converter<uint16_t> { static uint16_t convert(RLP const& _r, int _flags) { return _r.toInt<uint16_t>(_flags); } };
 template <> struct Converter<uint32_t> { static uint32_t convert(RLP const& _r, int _flags) { return _r.toInt<uint32_t>(_flags); } };

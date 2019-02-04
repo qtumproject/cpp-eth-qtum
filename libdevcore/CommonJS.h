@@ -14,26 +14,25 @@
 	You should have received a copy of the GNU General Public License
 	along with cpp-ethereum.  If not, see <http://www.gnu.org/licenses/>.
 */
-/** @file CommonJS.h
- * @authors:
- *   Gav Wood <i@gavwood.com>
- *   Marek Kotewicz <marek@ethdev.com>
- * @date 2014
- */
 
 #pragma once
 
-#include <string>
-#include "FixedHash.h"
 #include "CommonData.h"
 #include "CommonIO.h"
+#include "FixedHash.h"
+
+#include <string>
 
 namespace dev
 {
+inline std::string toJS(byte _b)
+{
+    return "0x" + std::to_string(_b);
+}
 
 template <unsigned S> std::string toJS(FixedHash<S> const& _h)
 {
-	return "0x" + toHex(_h.ref());
+	return toHexPrefixed(_h.ref());
 }
 
 template <unsigned N> std::string toJS(boost::multiprecision::number<boost::multiprecision::cpp_int_backend<N, N, boost::multiprecision::unsigned_magnitude, boost::multiprecision::unchecked, void>> const& _n)
@@ -46,9 +45,12 @@ template <unsigned N> std::string toJS(boost::multiprecision::number<boost::mult
 
 inline std::string toJS(bytes const& _n, std::size_t _padding = 0)
 {
-	bytes n = _n;
-	n.resize(std::max<unsigned>(n.size(), _padding));
-	return "0x" + toHex(n);
+    if (_n.empty())
+        return {};
+
+    bytes n = _n;
+    n.resize(std::max<unsigned>(n.size(), _padding));
+    return toHexPrefixed(n);
 }
 
 template<unsigned T> std::string toJS(SecureFixedHash<T> const& _i)

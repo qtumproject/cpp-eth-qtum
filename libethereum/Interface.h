@@ -77,14 +77,13 @@ public:
 
 	/// Submits a new transaction.
 	/// @returns the transaction's hash.
-	virtual std::pair<h256, Address> submitTransaction(TransactionSkeleton const& _t, Secret const& _secret) = 0;
+	virtual h256 submitTransaction(TransactionSkeleton const& _t, Secret const& _secret) = 0;
 
 	/// Submits the given message-call transaction.
 	void submitTransaction(Secret const& _secret, u256 const& _value, Address const& _dest, bytes const& _data = bytes(), u256 const& _gas = 1000000, u256 const& _gasPrice = DefaultGasPrice, u256 const& _nonce = Invalid256);
 
-	/// Submits a new contract-creation transaction.
-	/// @returns the new contract's address (assuming it all goes through).
-	Address submitTransaction(Secret const& _secret, u256 const& _endowment, bytes const& _init, u256 const& _gas = 1000000, u256 const& _gasPrice = DefaultGasPrice, u256 const& _nonce = Invalid256);
+    /// Imports the given transaction into the transaction queue
+	virtual h256 importTransaction(Transaction const& _t) = 0;
 
 	/// Blocks until all pending transactions have been processed.
 	virtual void flushTransactions() = 0;
@@ -94,16 +93,6 @@ public:
 	ExecutionResult call(Address const& _from, u256 _value, Address _dest, bytes const& _data = bytes(), u256 _gas = 1000000, u256 _gasPrice = DefaultGasPrice, FudgeFactor _ff = FudgeFactor::Strict) { return call(_from, _value, _dest, _data, _gas, _gasPrice, m_default, _ff); }
 	ExecutionResult call(Secret const& _secret, u256 _value, Address _dest, bytes const& _data, u256 _gas, u256 _gasPrice, BlockNumber _blockNumber, FudgeFactor _ff = FudgeFactor::Strict) { return call(toAddress(_secret), _value, _dest, _data, _gas, _gasPrice, _blockNumber, _ff); }
 	ExecutionResult call(Secret const& _secret, u256 _value, Address _dest, bytes const& _data, u256 _gas, u256 _gasPrice, FudgeFactor _ff = FudgeFactor::Strict) { return call(toAddress(_secret), _value, _dest, _data, _gas, _gasPrice, _ff); }
-
-	/// Does the given creation. Nothing is recorded into the state.
-	/// @returns the pair of the Address of the created contract together with its code.
-	virtual ExecutionResult create(Address const& _from, u256 _value, bytes const& _data, u256 _gas, u256 _gasPrice, BlockNumber _blockNumber, FudgeFactor _ff = FudgeFactor::Strict) = 0;
-	ExecutionResult create(Address const& _from, u256 _value, bytes const& _data = bytes(), u256 _gas = 1000000, u256 _gasPrice = DefaultGasPrice, FudgeFactor _ff = FudgeFactor::Strict) { return create(_from, _value, _data, _gas, _gasPrice, m_default, _ff); }
-	ExecutionResult create(Secret const& _secret, u256 _value, bytes const& _data, u256 _gas, u256 _gasPrice, BlockNumber _blockNumber, FudgeFactor _ff = FudgeFactor::Strict) { return create(toAddress(_secret), _value, _data, _gas, _gasPrice, _blockNumber, _ff); }
-	ExecutionResult create(Secret const& _secret, u256 _value, bytes const& _data, u256 _gas, u256 _gasPrice, FudgeFactor _ff = FudgeFactor::Strict) { return create(toAddress(_secret), _value, _data, _gas, _gasPrice, _ff); }
-
-	/// Injects the RLP-encoded transaction given by the _rlp into the transaction queue directly.
-	virtual ImportResult injectTransaction(bytes const& _rlp, IfDropped _id = IfDropped::Ignore) = 0;
 
 	/// Injects the RLP-encoded block given by the _rlp into the block queue directly.
 	virtual ImportResult injectBlock(bytes const& _block) = 0;
@@ -169,8 +158,10 @@ public:
 	virtual BlockHeader uncle(h256 _blockHash, unsigned _i) const = 0;
 	virtual UncleHashes uncleHashes(h256 _blockHash) const = 0;
 	virtual unsigned transactionCount(h256 _blockHash) const = 0;
+	virtual unsigned transactionCount(BlockNumber _block) const = 0;
 	virtual unsigned uncleCount(h256 _blockHash) const = 0;
 	virtual Transactions transactions(h256 _blockHash) const = 0;
+	virtual Transactions transactions(BlockNumber _block) const = 0;
 	virtual TransactionHashes transactionHashes(h256 _blockHash) const = 0;
 
 	virtual BlockHeader pendingInfo() const { return BlockHeader(); }
@@ -181,8 +172,6 @@ public:
 	BlockHeader blockInfo(BlockNumber _block) const;
 	BlockDetails blockDetails(BlockNumber _block) const;
 	Transaction transaction(BlockNumber _block, unsigned _i) const { auto p = transactions(_block); return _i < p.size() ? p[_i] : Transaction(); }
-	unsigned transactionCount(BlockNumber _block) const { if (_block == PendingBlock) { auto p = pending(); return p.size(); } return transactionCount(hashFromNumber(_block)); }
-	Transactions transactions(BlockNumber _block) const { if (_block == PendingBlock) return pending(); return transactions(hashFromNumber(_block)); }
 	TransactionHashes transactionHashes(BlockNumber _block) const { if (_block == PendingBlock) return pendingHashes(); return transactionHashes(hashFromNumber(_block)); }
 	BlockHeader uncle(BlockNumber _block, unsigned _i) const { return uncle(hashFromNumber(_block), _i); }
 	UncleHashes uncleHashes(BlockNumber _block) const { return uncleHashes(hashFromNumber(_block)); }
@@ -193,7 +182,7 @@ public:
 	/// @returns The height of the chain.
 	virtual unsigned number() const = 0;
 
-	/// Get a map containing each of the pending transactions.
+	/// Get a map containing each of the pending transactions (transactions from accounts managed by this node which have not yet made it into a mined block)
 	/// @TODO: Remove in favour of transactions().
 	virtual Transactions pending() const = 0;
 	virtual h256s pendingHashes() const = 0;
@@ -210,6 +199,9 @@ public:
 
 	/// Get some information on the block queue.
 	virtual SyncStatus syncStatus() const = 0;
+
+	/// Populate the uninitialized fields in the supplied transaction with default values
+	virtual TransactionSkeleton populateTransactionWithDefaults(TransactionSkeleton const& _t) const = 0;
 
 	// [SEALING API]:
 
@@ -236,6 +228,9 @@ public:
 	virtual u256 networkId() const { return 0; }
 	/// Sets the network id.
 	virtual void setNetworkId(u256 const&) {}
+
+	/// Gets the chain id
+	virtual int chainId() const { return 0; }
 
 	/// Get the seal engine.
 	virtual SealEngineFace* sealEngine() const { return nullptr; }

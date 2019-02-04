@@ -1,191 +1,105 @@
 /*
-	This file is part of cpp-ethereum.
+    This file is part of cpp-ethereum.
 
-	cpp-ethereum is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
+    cpp-ethereum is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-	cpp-ethereum is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
+    cpp-ethereum is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
 
-	You should have received a copy of the GNU General Public License
-	along with cpp-ethereum.  If not, see <http://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU General Public License
+    along with cpp-ethereum.  If not, see <http://www.gnu.org/licenses/>.
 */
-/** @file MemoryDB.cpp
- * @author Gav Wood <i@gavwood.com>
- * @date 2014
- */
 
-#include "Common.h"
 #include "MemoryDB.h"
-using namespace std;
-using namespace dev;
 
 namespace dev
 {
-
-const char* DBChannel::name() { return "TDB"; }
-const char* DBWarn::name() { return "TDB"; }
-
-std::unordered_map<h256, std::string> MemoryDB::get() const
+namespace db
 {
-#if DEV_GUARDED_DB
-	ReadGuard l(x_this);
-#endif
-	std::unordered_map<h256, std::string> ret;
-	for (auto const& i: m_main)
-		if (!m_enforceRefs || i.second.second > 0)
-			ret.insert(make_pair(i.first, i.second.first));
-	return ret;
-}
 
-MemoryDB& MemoryDB::operator=(MemoryDB const& _c)
+void MemoryDBWriteBatch::insert(Slice _key, Slice _value)
 {
-	if (this == &_c)
-		return *this;
-#if DEV_GUARDED_DB
-	ReadGuard l(_c.x_this);
-	WriteGuard l2(x_this);
-#endif
-	m_main = _c.m_main;
-	m_aux = _c.m_aux;
-	return *this;
+    m_batch[_key.toString()] = _value.toString();
 }
 
-std::string MemoryDB::lookup(h256 const& _h) const
+void MemoryDBWriteBatch::kill(Slice _key)
 {
-#if DEV_GUARDED_DB
-	ReadGuard l(x_this);
-#endif
-	auto it = m_main.find(_h);
-	if (it != m_main.end())
-	{
-		if (!m_enforceRefs || it->second.second > 0)
-			return it->second.first;
-		else
-			cwarn << "Lookup required for value with refcount == 0. This is probably a critical trie issue" << _h;
-	}
-	return std::string();
+    m_batch.erase(_key.toString());
 }
 
-bool MemoryDB::exists(h256 const& _h) const
+std::string MemoryDB::lookup(Slice _key) const
 {
-#if DEV_GUARDED_DB
-	ReadGuard l(x_this);
-#endif
-	auto it = m_main.find(_h);
-	if (it != m_main.end() && (!m_enforceRefs || it->second.second > 0))
-		return true;
-	return false;
+    Guard lock(m_mutex);
+    auto const& it = m_db.find(_key.toString());
+    if (it != m_db.end())
+        return it->second;
+    return {};
 }
 
-void MemoryDB::insert(h256 const& _h, bytesConstRef _v)
+bool MemoryDB::exists(Slice _key) const
 {
-#if DEV_GUARDED_DB
-	WriteGuard l(x_this);
-#endif
-	auto it = m_main.find(_h);
-	if (it != m_main.end())
-	{
-		it->second.first = _v.toString();
-		it->second.second++;
-	}
-	else
-		m_main[_h] = make_pair(_v.toString(), 1);
-#if ETH_PARANOIA
-	dbdebug << "INST" << _h << "=>" << m_main[_h].second;
-#endif
+    Guard lock(m_mutex);
+    return m_db.count(_key.toString()) != 0;
 }
 
-bool MemoryDB::kill(h256 const& _h)
+void MemoryDB::insert(Slice _key, Slice _value)
 {
-#if DEV_GUARDED_DB
-	ReadGuard l(x_this);
-#endif
-	if (m_main.count(_h))
-	{
-		if (m_main[_h].second > 0)
-		{
-			m_main[_h].second--;
-			return true;
-		}
-#if ETH_PARANOIA
-		else
-		{
-			// If we get to this point, then there was probably a node in the level DB which we need to remove and which we have previously
-			// used as part of the memory-based MemoryDB. Nothing to be worried about *as long as the node exists in the DB*.
-			dbdebug << "NOKILL-WAS" << _h;
-		}
-		dbdebug << "KILL" << _h << "=>" << m_main[_h].second;
-	}
-	else
-	{
-		dbdebug << "NOKILL" << _h;
-#endif
-	}
-	return false;
+    Guard lock(m_mutex);
+    m_db[_key.toString()] = _value.toString();
 }
 
-bytes MemoryDB::lookupAux(h256 const& _h) const
+void MemoryDB::kill(Slice _key)
 {
-#if DEV_GUARDED_DB
-	ReadGuard l(x_this);
-#endif
-	auto it = m_aux.find(_h);
-	if (it != m_aux.end() && (!m_enforceRefs || it->second.second))
-		return it->second.first;
-	return bytes();
+    Guard lock(m_mutex);
+    m_db.erase(_key.toString());
 }
 
-void MemoryDB::removeAux(h256 const& _h)
+std::unique_ptr<WriteBatchFace> MemoryDB::createWriteBatch() const
 {
-#if DEV_GUARDED_DB
-	WriteGuard l(x_this);
-#endif
-	m_aux[_h].second = false;
+    return std::unique_ptr<WriteBatchFace>(new MemoryDBWriteBatch);
 }
 
-void MemoryDB::insertAux(h256 const& _h, bytesConstRef _v)
+void MemoryDB::commit(std::unique_ptr<WriteBatchFace> _batch)
 {
-#if DEV_GUARDED_DB
-	WriteGuard l(x_this);
-#endif
-	m_aux[_h] = make_pair(_v.toBytes(), true);
+    if (!_batch)
+    {
+        BOOST_THROW_EXCEPTION(DatabaseError() << errinfo_comment("Cannot commit null batch"));
+    }
+
+    auto* batchPtr = dynamic_cast<MemoryDBWriteBatch*>(_batch.get());
+    if (!batchPtr)
+    {
+        BOOST_THROW_EXCEPTION(
+            DatabaseError() << errinfo_comment("Invalid batch type passed to MemoryDB::commit"));
+    }
+    auto const& batch = batchPtr->writeBatch();
+    Guard lock(m_mutex);
+    for (auto& e : batch)
+    {
+        m_db[e.first] = e.second;
+    }
 }
 
-void MemoryDB::purge()
+// A database must implement the `forEach` method that allows the caller
+// to pass in a function `f`, which will be called with the key and value
+// of each record in the database. If `f` returns false, the `forEach`
+// method must return immediately.
+void MemoryDB::forEach(std::function<bool(Slice, Slice)> _f) const
 {
-#if DEV_GUARDED_DB
-	WriteGuard l(x_this);
-#endif
-	// purge m_main
-	for (auto it = m_main.begin(); it != m_main.end(); )
-		if (it->second.second)
-			++it;
-		else
-			it = m_main.erase(it);
-
-	// purge m_aux
-	for (auto it = m_aux.begin(); it != m_aux.end(); )
-		if (it->second.second)
-			++it;
-		else
-			it = m_aux.erase(it);
+    Guard lock(m_mutex);
+    for (auto const& e : m_db)
+    {
+        if (!_f(Slice(e.first), Slice(e.second)))
+        {
+            return;
+        }
+    }
 }
 
-h256Hash MemoryDB::keys() const
-{
-#if DEV_GUARDED_DB
-	ReadGuard l(x_this);
-#endif
-	h256Hash ret;
-	for (auto const& i: m_main)
-		if (i.second.second)
-			ret.insert(i.first);
-	return ret;
-}
-
-}
+}  // namespace db
+}  // namespace dev
