@@ -178,10 +178,15 @@ void ExtVM::suicide(Address _a)
     // http://martin.swende.se/blog/Ethereum_quirks_and_vulns.html). There is one test case
     // witnessing the current consensus
     // 'GeneralStateTests/stSystemOperationsTest/suicideSendEtherPostDeath.json'.
+#ifdef QTUM_BUILD
     if(!m_s.addressInUse(_a)){
         m_sealEngine.deleteAddresses.insert(_a);
     }
     m_s.transferBalance(myAddress, _a, m_s.balance(myAddress));
+#else
+    m_s.addBalance(_a, m_s.balance(myAddress));
+    m_s.setBalance(myAddress, 0);
+#endif
     ExtVMFace::suicide(_a);
 }
 
