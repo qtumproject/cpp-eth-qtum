@@ -29,6 +29,36 @@ using namespace std;
 using namespace dev;
 using namespace dev::eth;
 
+#ifdef QTUM_BUILD
+#include <pubkey.h>
+bool btc_ecrecover_impl(h256 const& hash, u256 const& v, h256 const& r, h256 const& s, h256 & key)
+{
+    // Convert the data into format usable for btc
+    CPubKey pubKey;
+    std::vector<unsigned char> vchSig;
+    vchSig.push_back((unsigned char)v);
+    vchSig += r.asBytes();
+    vchSig += s.asBytes();
+    uint256 mesage = h256Touint(hash);
+
+    // Recover public key from compact signature (65 bytes)
+    // The public key can be compressed or uncompressed
+    if(pubKey.RecoverCompact(mesage, vchSig))
+    {
+        // Get the pubkeyhash
+        CKeyID id = pubKey.GetID();
+        size_t padding = sizeof(key) - sizeof(id);
+        memset(key.data(), 0, padding);
+        memcpy(key.data() + padding, id.begin(), sizeof(id));
+        return true;
+    }
+
+    return false;
+}
+#else
+bool btc_ecrecover_impl(h256 const&, u256 const&, h256 const&, h256 const&, h256 &) {return false;}
+#endif
+
 PrecompiledRegistrar* PrecompiledRegistrar::s_this = nullptr;
 
 PrecompiledExecutor const& PrecompiledRegistrar::executor(std::string const& _name)
@@ -73,6 +103,34 @@ ETH_REGISTER_PRECOMPILED(ecrecover)(bytesConstRef _in)
 		}
 	}
 	return {true, {}};
+}
+
+ETH_REGISTER_PRECOMPILED(btc_ecrecover)(bytesConstRef _in)
+{
+    struct
+    {
+        h256 hash;
+        h256 v;
+        h256 r;
+        h256 s;
+    } in;
+
+    memcpy(&in, _in.data(), min(_in.size(), sizeof(in)));
+
+    h256 ret;
+    u256 v = (u256)in.v;
+    if (v >= 27 && v <= 28)
+    {
+        try
+        {
+            if(btc_ecrecover_impl(in.hash, v, in.r, in.s, ret))
+            {
+                return {true, ret.asBytes()};
+            }
+        }
+        catch (...) {}
+    }
+    return {true, {}};
 }
 
 ETH_REGISTER_PRECOMPILED(sha256)(bytesConstRef _in)
