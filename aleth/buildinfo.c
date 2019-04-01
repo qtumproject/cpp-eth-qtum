@@ -9,9 +9,9 @@ const struct buildinfo* aleth_get_buildinfo()
 {
     static const struct buildinfo buildinfo = {
         .project_name = "aleth",
-        .project_version = "1.5.2",
-        .project_name_with_version = "aleth-1.5.2",
-        .git_commit_hash = "f693331f2d4ea73c4913eebbec462e51138ade8f",
+        .project_version = "1.6.0-alpha.1",
+        .project_name_with_version = "aleth-1.6.0-alpha.1",
+        .git_commit_hash = "d5cbe3c5934f0b9ae4b0dbbe4dc264389d5281c5",
         .system_name = "",
         .system_processor = "",
         .compiler_id = "",

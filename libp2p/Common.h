@@ -52,8 +52,7 @@ namespace p2p
 {
 
 /// Peer network protocol version.
-extern const unsigned c_protocolVersion;
-extern const unsigned c_defaultIPPort;
+constexpr unsigned c_protocolVersion = 4;
 
 class NodeIPEndpoint;
 class Node;
@@ -77,6 +76,7 @@ class Session;
 
 struct NetworkStartRequired: virtual dev::Exception {};
 struct InvalidPublicIPAddress: virtual dev::Exception {};
+struct NetworkRestartNotSupported : virtual dev::Exception {};
 
 /// The ECDHE agreement failed during RLPx handshake.
 struct ECDHEError: virtual Exception {};
@@ -122,25 +122,10 @@ enum DisconnectReason
     NoDisconnect = 0xffff
 };
 
-inline bool isPermanentProblem(DisconnectReason _r)
-{
-    switch (_r)
-    {
-    case DuplicatePeer:
-    case IncompatibleProtocol:
-    case NullIdentity:
-    case UnexpectedIdentity:
-    case LocalIdentity:
-        return true;
-    default:
-        return false;
-    }
-}
-
 /// @returns the string form of the given disconnection reason.
 std::string reasonOf(DisconnectReason _r);
 
-using CapDesc = std::pair<std::string, u256>;
+using CapDesc = std::pair<std::string, unsigned>;
 using CapDescSet = std::set<CapDesc>;
 using CapDescs = std::vector<CapDesc>;
 
@@ -157,9 +142,7 @@ struct PeerSessionInfo
     unsigned short const port;
     std::chrono::steady_clock::duration lastPing;
     std::set<CapDesc> const caps;
-    unsigned socketId;
     std::map<std::string, std::string> notes;
-    unsigned const protocolVersion;
 };
 
 using PeerSessionInfos = std::vector<PeerSessionInfo>;
@@ -184,14 +167,17 @@ public:
 
     NodeIPEndpoint() = default;
     NodeIPEndpoint(bi::address _addr, uint16_t _udp, uint16_t _tcp)
-      : m_address(_addr), m_udpPort(_udp), m_tcpPort(_tcp)
+      : m_address(std::move(_addr)), m_udpPort(_udp), m_tcpPort(_tcp)
     {}
-    NodeIPEndpoint(RLP const& _r) { interpretRLP(_r); }
+    explicit NodeIPEndpoint(RLP const& _r) { interpretRLP(_r); }
 
-    operator bi::udp::endpoint() const { return bi::udp::endpoint(m_address, m_udpPort); }
-    operator bi::tcp::endpoint() const { return bi::tcp::endpoint(m_address, m_tcpPort); }
+    operator bi::udp::endpoint() const { return {m_address, m_udpPort}; }
+    operator bi::tcp::endpoint() const { return {m_address, m_tcpPort}; }
 
-    operator bool() const { return !m_address.is_unspecified() && m_udpPort > 0 && m_tcpPort > 0; }
+    explicit operator bool() const
+    {
+        return !m_address.is_unspecified() && m_udpPort > 0 && m_tcpPort > 0;
+    }
 
     bool operator==(NodeIPEndpoint const& _cmp) const {
         return m_address == _cmp.m_address && m_udpPort == _cmp.m_udpPort &&
@@ -206,7 +192,7 @@ public:
 
     bi::address address() const { return m_address; }
 
-    void setAddress(bi::address _addr) { m_address = _addr; }
+    void setAddress(bi::address _addr) { m_address = std::move(_addr); }
 
     uint16_t udpPort() const { return m_udpPort; }
 
@@ -259,10 +245,9 @@ public:
     Node(Public _publicKey, NodeIPEndpoint const& _ip, PeerType _peerType = PeerType::Optional): id(_publicKey), endpoint(_ip), peerType(_peerType) {}
     Node(NodeSpec const& _s, PeerType _peerType = PeerType::Optional);
 
-    virtual NodeID const& address() const { return id; }
-    virtual Public const& publicKey() const { return id; }
-    
-    virtual operator bool() const { return (bool)id; }
+    NodeID const& address() const { return id; }
+
+    explicit operator bool() const { return bool{id}; }
 
     // TODO: make private, give accessors and rename m_...
     NodeID id;
@@ -274,6 +259,8 @@ public:
     // TODO: p2p implement
     std::atomic<PeerType> peerType{PeerType::Optional};
 };
+
+boost::log::formatting_ostream& operator<<(boost::log::formatting_ostream& _log, const Node& _node);
 
 class DeadlineOps
 {

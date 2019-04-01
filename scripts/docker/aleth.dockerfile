@@ -15,9 +15,8 @@ RUN apk add --no-cache \
         git
 ADD . /source
 WORKDIR /build
-RUN cmake /source -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DHUNTER_JOBS_NUMBER=$(nproc)
+RUN cmake /source -DVMTRACE=ON -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DHUNTER_JOBS_NUMBER=$(nproc)
 RUN make -j $(nproc) && make install
-
 
 # Target: testeth
 # This is not the last stage so build it as
@@ -33,7 +32,7 @@ ENTRYPOINT ["/usr/bin/testeth"]
 
 FROM alpine:latest AS aleth
 RUN apk add --no-cache python3 libstdc++
-COPY --from=builder /usr/bin/aleth /source/scripts/aleth.py /source/scripts/jsonrpcproxy.py /usr/bin/
+COPY --from=builder /usr/bin/aleth /source/scripts/aleth.py /source/scripts/dopple.py /usr/bin/
 COPY --from=builder /usr/share/aleth/ /usr/share/aleth/
 EXPOSE 8545
 ENTRYPOINT ["/usr/bin/aleth.py"]

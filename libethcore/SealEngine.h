@@ -49,6 +49,12 @@ public:
 	{}
 	virtual ~SealEngineFace() {}
 
+	/// @returns Tuple of hash of the current block to be mined minus nonce, seed hash, target boundary.
+    virtual std::tuple<h256, h256, h256> getWork(BlockHeader const&)
+    {
+        return std::tuple<h256, h256, h256>{};
+    }
+    virtual bool isMining() const { return false; }
     virtual unsigned revision() const { return 0; }
     virtual unsigned sealFields() const { return 0; }
     virtual bytes sealRLP() const { return bytes(); }
@@ -156,6 +162,7 @@ public:
     void generateSeal(BlockHeader const& _bi) override;
     void populateFromParent(BlockHeader& _bi, BlockHeader const& _parent) const override;
     void verify(Strictness _s, BlockHeader const& _bi, BlockHeader const& _parent, bytesConstRef _block) const override;
+    StringHashMap jsInfo(BlockHeader const& _bi) const override;
 };
 
 u256 calculateEthashDifficulty(

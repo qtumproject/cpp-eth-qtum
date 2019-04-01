@@ -1,5 +1,5 @@
 // Aleth: Ethereum C++ client, tools and libraries.
-// Copyright 2018 Aleth Authors.
+// Copyright 2019 Aleth Authors.
 // Licensed under the GNU General Public License, Version 3.
 
 #pragma once
@@ -8,7 +8,6 @@
 #include "Network.h"
 #include "NodeTable.h"
 #include "Peer.h"
-#include "RLPXFrameCoder.h"
 #include "RLPXSocket.h"
 #include <libdevcore/Guards.h>
 #include <libdevcore/Worker.h>
@@ -45,6 +44,8 @@ class CapabilityFace;
 class CapabilityHostFace;
 class Host;
 class SessionFace;
+class RLPXFrameCoder;
+class RLPXHandshake;
 
 class HostNodeTableHandler: public NodeTableEventHandler
 {
@@ -141,9 +142,10 @@ public:
     /// Might be useful when you want to handle several subprotocol versions with a single
     /// capability class.
     void registerCapability(std::shared_ptr<CapabilityFace> const& _cap, std::string const& _name,
-        u256 const& _version);
+        unsigned _version);
 
     bool haveCapability(CapDesc const& _name) const { return m_capabilities.count(_name) != 0; }
+    bool haveCapabilities() const { return !caps().empty(); }
     CapDescs caps() const { CapDescs ret; for (auto const& i: m_capabilities) ret.push_back(i.first); return ret; }
 
     /// Add a potential peer.
@@ -157,6 +159,9 @@ public:
 
     /// Create Peer and attempt keeping peer connected.
     void requirePeer(NodeID const& _node, bi::address const& _addr, unsigned short _udpPort, unsigned short _tcpPort) { requirePeer(_node, NodeIPEndpoint(_addr, _udpPort, _tcpPort)); }
+
+    /// returns true if a member of m_requiredPeers
+    bool isRequiredPeer(NodeID const&) const;
 
     /// Note peer as no longer being required.
     void relinquishPeer(NodeID const& _node);
@@ -187,8 +192,6 @@ public:
 
     NetworkConfig const& networkConfig() const { return m_netConfig; }
 
-    void setNetworkConfig(NetworkConfig const& _p, bool _dropPeers = false) { m_dropPeers = _dropPeers; auto had = isStarted(); if (had) stop(); m_netConfig = _p; if (had) start(); }
-
     /// Start network. @threadsafe
     void start();
 
@@ -203,7 +206,7 @@ public:
     ReputationManager& repMan() { return m_repMan; }
 
     /// @returns if network is started and interactive.
-    bool haveNetwork() const { Guard l(x_runTimer); Guard ll(x_nodeTable); return m_run && !!m_nodeTable; }
+    bool haveNetwork() const { return m_run; }
     
     /// Validates and starts peer session, taking ownership of _io. Disconnects and returns false upon error.
     void startPeerSession(Public const& _id, RLP const& _hello, std::unique_ptr<RLPXFrameCoder>&& _io, std::shared_ptr<RLPXSocket> const& _s);
@@ -279,12 +282,12 @@ private:
     /// Get or create host identifier (KeyPair).
     static KeyPair networkAlias(bytesConstRef _b);
 
-    /// returns true if a member of m_requiredPeers
-    bool isRequiredPeer(NodeID const&) const;
-
     bool nodeTableHasNode(Public const& _id) const;
     Node nodeFromNodeTable(Public const& _id) const;
-    bool addNodeToNodeTable(Node const& _node, NodeTable::NodeRelation _relation = NodeTable::NodeRelation::Unknown);
+    bool addNodeToNodeTable(Node const& _node);
+
+    bool addKnownNodeToNodeTable(
+        Node const& _node, uint32_t _lastPongReceivedTime, uint32_t _lastPongSentTime);
 
     /// Determines if a node with the supplied endpoint should be included in or restored from the
     /// serialized network configuration data
@@ -309,10 +312,10 @@ private:
     io::io_service m_ioService;											///< IOService for network stuff.
     bi::tcp::acceptor m_tcp4Acceptor;										///< Listening acceptor.
 
-    std::unique_ptr<io::deadline_timer> m_timer;					///< Timer which, when network is running, calls run() every c_timerInterval ms.
-    mutable std::mutex x_runTimer;	///< Start/stop mutex.
+    /// Timer which, when network is running, calls run() every c_timerInterval ms.
+    io::deadline_timer m_timer;
+
     static constexpr unsigned c_timerInterval = 100;							///< Interval which m_timer is run when network is connected.
-    std::condition_variable m_timerReset;
 
     std::set<Peer*> m_pendingPeerConns;									/// Used only by connect(Peer&) to limit concurrently connecting to same node. See connect(shared_ptr<Peer>const&).
 
@@ -333,8 +336,8 @@ private:
     /// Mutable because we flush zombie entries (null-weakptrs) as regular maintenance from a const method.
     mutable std::unordered_map<NodeID, std::weak_ptr<SessionFace>> m_sessions;
     mutable RecursiveMutex x_sessions;
-    
-    std::list<std::weak_ptr<RLPXHandshake>> m_connecting;					///< Pending connections.
+
+    std::list<std::weak_ptr<RLPXHandshake>> m_connecting;               ///< Pending connections.
     Mutex x_connecting;													///< Mutex for m_connecting.
 
     unsigned m_idealPeerCount = 11;										///< Ideal number of peers to be connected to.
@@ -349,7 +352,6 @@ private:
 
     std::chrono::steady_clock::time_point m_lastPing;						///< Time we sent the last ping to all peers.
     bool m_accepting = false;
-    bool m_dropPeers = false;
 
     ReputationManager m_repMan;
 
