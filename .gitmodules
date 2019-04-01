@@ -10,3 +10,6 @@
 [submodule "ethash"]
 	path = ethash
 	url = https://github.com/chfast/ethash
+[submodule "scripts/dopple"]
+	path = scripts/dopple
+	url = https://github.com/ethereum/dopple

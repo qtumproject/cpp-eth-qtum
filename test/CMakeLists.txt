@@ -1,3 +1,6 @@
+set(timeout 540)  # The timeout in seconds for individual tests.
+set(CTEST_OUTPUT_ON_FAILURE TRUE)
+
 include(GoogleTest)
 
 hunter_add_package(GTest)
@@ -18,12 +21,17 @@ set(unittest_sources
     unittests/libethcore/CommonJS.cpp
     unittests/libethcore/KeyManager.cpp
 
+    unittests/libethereum/ValidationSchemes.cpp
+
+    unittests/libp2p/capability.cpp
+    unittests/libp2p/eip-8.cpp
+    unittests/libp2p/rlpx.cpp
+
     unittests/libweb3core/memorydb.cpp
     unittests/libweb3core/overlaydb.cpp
     unittests/libweb3core/statecachedb.cpp
 
     unittests/libweb3jsonrpc/AccountHolder.cpp
-    unittests/libethereum/ValidationSchemes.cpp
 )
 
 add_executable(aleth-unittests ${unittest_sources})
@@ -32,7 +40,8 @@ target_link_libraries(aleth-unittests PRIVATE
     web3jsonrpc ethashseal devcrypto devcore
     GTest::gtest GTest::main
 )
-gtest_add_tests(TARGET aleth-unittests TEST_PREFIX unittests/)
+gtest_add_tests(TARGET aleth-unittests TEST_PREFIX unittests/ TEST_LIST unittests)
+set_tests_properties(${unittests} PROPERTIES TIMEOUT ${timeout})
 
 
 file(GLOB_RECURSE sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "*.cpp" "*.h" "*.sol" )
@@ -70,6 +79,7 @@ foreach(file ${sources})
                     separate_arguments(TESTETH_ARGS)
                     set(TestEthArgs -t ${TestSuitePathFixed} -- ${TESTETH_ARGS})
                     add_test(NAME ${TestSuitePathFixed} WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/test COMMAND testeth ${TestEthArgs})
+                    set_tests_properties(${TestSuitePathFixed} PROPERTIES TIMEOUT ${timeout})
                 endif()
             endif()
         elseif(test MATCHES "^CASE .*")
@@ -80,6 +90,7 @@ foreach(file ${sources})
                     separate_arguments(TESTETH_ARGS)
                     set(TestEthArgs -t ${TestSuitePathFixed}/${TestCase} -- ${TESTETH_ARGS})
                     add_test(NAME ${TestSuitePathFixed}/${TestCase} WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/test COMMAND testeth ${TestEthArgs})
+                    set_tests_properties(${TestSuitePathFixed}/${TestCase} PROPERTIES TIMEOUT ${timeout})
                 endif()
             endif()
         elseif (";${test_raw};" MATCHES "BOOST_AUTO_TEST_SUITE_END()")
@@ -98,9 +109,7 @@ target_include_directories(testeth PRIVATE ${UTILS_INCLUDE_DIR})
 target_link_libraries(testeth PRIVATE ethereum ethashseal web3jsonrpc devcrypto devcore aleth-buildinfo cryptopp-static yaml-cpp::yaml-cpp binaryen::binaryen libjson-rpc-cpp::client)
 install(TARGETS testeth DESTINATION ${CMAKE_INSTALL_BINDIR})
 
-
-enable_testing()
-set(CTEST_OUTPUT_ON_FAILURE TRUE)
+set_property(SOURCE tools/libtesteth/TestHelper.cpp PROPERTY COMPILE_DEFINITIONS BINARYEN_VERSION=${BINARYEN_VERSION})
 
 include(EthUtils)
 

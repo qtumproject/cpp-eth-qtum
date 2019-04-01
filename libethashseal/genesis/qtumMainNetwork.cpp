@@ -29,6 +29,7 @@ R"E(
 		"EIP158ForkBlock": "0x00",
 		"byzantiumForkBlock": "QIP7_STARTING_BLOCK",
 		"constantinopleForkBlock": "QIP7_STARTING_BLOCK",
+        "constantinopleFixForkBlock": "QIP7_STARTING_BLOCK",
 		"networkID" : "0x01",
 		"chainID": "0x01",
 		"maximumExtraDataSize": "0x20",
