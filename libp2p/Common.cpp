@@ -12,6 +12,12 @@ namespace p2p
 {
 using namespace std;
 
+#ifdef QTUM_BUILD
+Logger g_netnoteLogger(VerbosityInfo, "net");
+Logger g_netlogLogger(VerbosityDebug, "net");
+Logger g_netdetailsLogger(VerbosityTrace, "net");
+#endif
+
 const NodeIPEndpoint UnspecifiedNodeIPEndpoint = NodeIPEndpoint{{}, 0, 0};
 const Node UnspecifiedNode = Node{{}, UnspecifiedNodeIPEndpoint};
 
@@ -238,6 +244,7 @@ bool NodeSpec::isValid() const
     return m_id && !m_address.empty();
 }
 
+#ifndef QTUM_BUILD
 std::ostream& operator<<(std::ostream& _out, NodeIPEndpoint const& _ep)
 {
     _out << _ep.address() << ':' << _ep.tcpPort();
@@ -252,6 +259,7 @@ boost::log::formatting_ostream& operator<<(boost::log::formatting_ostream& _log,
 {
     return _log << _node.id << '@' << _node.endpoint;
 }
+#endif
 
 }  // namespace p2p
 }  // namespace dev
