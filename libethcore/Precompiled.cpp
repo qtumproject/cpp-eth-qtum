@@ -99,11 +99,11 @@ ETH_REGISTER_PRECOMPILED(btc_ecrecover)(bytesConstRef _in)
     memcpy(&in, _in.data(), min(_in.size(), sizeof(in)));
 
     h256 ret;
-    u256 v = (u256)in.v;
     try
     {
         bool recovered = false;
 #ifdef QTUM_BUILD
+        u256 v = (u256)in.v;
         recovered = qtumutils::btc_ecrecover(in.hash, v, in.r, in.s, ret);
 #endif
         if(recovered)
