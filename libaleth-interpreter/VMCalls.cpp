@@ -114,10 +114,6 @@ void VM::caseCreate()
     u256 const initOff = m_SP[1];
     u256 const initSize = m_SP[2];
 
-#ifdef QTUM_BUILD
-    if (endowment) BOOST_THROW_EXCEPTION(CreateWithValue());
-#endif
-
     u256 salt;
     if (m_OP == Instruction::CREATE2)
     {
@@ -128,6 +124,10 @@ void VM::caseCreate()
 
     updateMem(memNeed(initOff, initSize));
     updateIOGas();
+
+#ifdef QTUM_BUILD
+    if (endowment) BOOST_THROW_EXCEPTION(CreateWithValue());
+#endif
 
     // Clear the return data buffer. This will not free the memory.
     m_returnData.clear();
