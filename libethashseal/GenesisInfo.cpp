@@ -34,7 +34,7 @@ using namespace dev;
 #include "genesis/qtumMainNetwork.cpp"
 #include "genesis/qtumTestNetwork.cpp"
 
-std::string const& dev::eth::genesisInfo(Network _n)
+std::string dev::eth::genesisInfo(Network _n, QtumParams* _p)
 {
 	switch (_n)
 	{
@@ -47,8 +47,8 @@ std::string const& dev::eth::genesisInfo(Network _n)
 	case Network::EIP150Test: return c_genesisInfoEIP150Test;
 	case Network::EIP158Test: return c_genesisInfoEIP158Test;
 	case Network::MetropolisTest: return c_genesisInfoMetropolisTest;
-	case Network::qtumMainNetwork: return c_genesisInfoQtumMainNetwork;
-	case Network::qtumTestNetwork: return c_genesisInfoQtumTestNetwork;
+	case Network::qtumMainNetwork: return genesisInfoQtumMainNetwork(_p);
+	case Network::qtumTestNetwork: return genesisInfoQtumTestNetwork(_p);
 	default:
 		throw std::invalid_argument("Invalid network value");
 	}

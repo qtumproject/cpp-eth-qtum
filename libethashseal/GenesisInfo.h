@@ -30,6 +30,17 @@ namespace dev
 namespace eth
 {
 
+/// Qtum parameters that influence chain consensus.
+struct QtumParams {
+    /// Params constructor
+    QtumParams():
+        QIP6Height(-1)
+    {}
+
+    /// Block height at which QIP6 becomes active
+    int QIP6Height;
+};
+
 /// The network id.
 enum class Network
 {
@@ -49,7 +60,7 @@ enum class Network
 	qtumTestNetwork = 10
 };
 
-std::string const& genesisInfo(Network _n);
+std::string genesisInfo(Network _n, QtumParams* _p = 0);
 h256 const& genesisStateRoot(Network _n);
 
 }
