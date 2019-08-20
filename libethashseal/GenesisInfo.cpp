@@ -51,12 +51,12 @@ using namespace dev;
 
 static dev::h256 const c_genesisDefaultStateRoot;
 
-std::string const& dev::eth::genesisInfo(Network _n)
+std::string dev::eth::genesisInfo(Network _n, QtumParams* _p)
 {
     switch (_n)
     {
     //Client genesis
-    case Network::qtumMainNetwork: return c_genesisInfoQtumMainNetwork;
+    case Network::qtumMainNetwork: return genesisInfoQtumMainNetwork(_p);
     case Network::MainNetwork: return c_genesisInfoMainNetwork;
     case Network::Ropsten: return c_genesisInfoRopsten;
 
