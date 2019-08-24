@@ -46,7 +46,7 @@ All development goes in develop branch.
 
 ## Testing
 
-To run the tests, make sure you clone https://github.com/ethereum/tests and point the environment variable
+To run the tests, make sure you clone https://github.com/qtumproject/tests-eth-qtum and point the environment variable
 `ETHEREUM_TEST_PATH` to that path.
 
 ## License
