@@ -263,7 +263,6 @@ Details on how to run and debug the tests can be found [here](doc/usingtesteth.r
 - [Internal documentation for developers](doc/index.rst).
 - [Outdated documentation for end users](http://www.ethdocs.org/en/latest/ethereum-clients/cpp-ethereum/).
 
-
 ## License
 
 [![License](https://img.shields.io/github/license/ethereum/aleth.svg)](LICENSE)
