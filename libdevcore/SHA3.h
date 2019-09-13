@@ -26,7 +26,7 @@
 #include "FixedHash.h"
 #include "vector_ref.h"
 
-#include <ethash/keccak.hpp>
+#include "ethash/keccak.hpp"
 
 #include <string>
 
