@@ -14,10 +14,6 @@
 	You should have received a copy of the GNU General Public License
 	along with cpp-ethereum.  If not, see <http://www.gnu.org/licenses/>.
 */
-/** @file RLP.cpp
- * @author Gav Wood <i@gavwood.com>
- * @date 2014
- */
 
 #include "RLP.h"
 using namespace std;
@@ -26,21 +22,32 @@ using namespace dev;
 bytes dev::RLPNull = rlp("");
 bytes dev::RLPEmptyList = rlpList();
 
+namespace {
+
+errinfo_comment constructRLPSizeErrorInfo(size_t _actualSize, size_t _dataSize)
+{
+    std::stringstream s;
+    s << "Actual size: " << _actualSize << ", data size: " << _dataSize;
+    return errinfo_comment(s.str());
+}
+
+}
+
 RLP::RLP(bytesConstRef _d, Strictness _s):
 	m_data(_d)
 {
 	if ((_s & FailIfTooBig) && actualSize() < _d.size())
 	{
 		if (_s & ThrowOnFail)
-			BOOST_THROW_EXCEPTION(OversizeRLP());
-		else
+            BOOST_THROW_EXCEPTION(OversizeRLP() << constructRLPSizeErrorInfo(actualSize(), _d.size()));
+        else
 			m_data.reset();
 	}
 	if ((_s & FailIfTooSmall) && actualSize() > _d.size())
 	{
 		if (_s & ThrowOnFail)
-			BOOST_THROW_EXCEPTION(UndersizeRLP());
-		else
+            BOOST_THROW_EXCEPTION(UndersizeRLP() << constructRLPSizeErrorInfo(actualSize(), _d.size()));
+        else
 			m_data.reset();
 	}
 }
@@ -88,21 +95,6 @@ RLP RLP::operator[](size_t _i) const
 		m_lastEnd += m_lastItem.size();
 	}
 	return RLP(m_lastItem, ThrowOnFail | FailIfTooSmall);
-}
-
-RLPs RLP::toList(int _flags) const
-{
-	RLPs ret;
-	if (!isList())
-	{
-		if (_flags & ThrowOnFail)
-			BOOST_THROW_EXCEPTION(BadCast());
-		else
-			return ret;
-	}
-	for (auto const& i: *this)
-		ret.push_back(i);
-	return ret;
 }
 
 size_t RLP::actualSize() const

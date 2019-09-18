@@ -1,81 +1,130 @@
+set(timeout 540)  # The timeout in seconds for individual tests.
+set(CTEST_OUTPUT_ON_FAILURE TRUE)
 
-aux_source_directory(. SRC_LIST)
+include(GoogleTest)
 
-macro (add_sources)
-	foreach (_src ${ARGN})
-		file (RELATIVE_PATH _relPath "${CMAKE_CURRENT_SOURCE_DIR}/.." "${CMAKE_CURRENT_LIST_DIR}")
-		list (APPEND SRC "./${_relPath}/${_src}")
-		set(SRC ${SRC} PARENT_SCOPE)
-	endforeach()
-endmacro()
+hunter_add_package(GTest)
+find_package(GTest CONFIG REQUIRED)
 
-add_subdirectory(libtesteth)
-add_subdirectory(fuzzTesting)
-add_subdirectory(libethcore)
-add_subdirectory(libethereum)
-add_subdirectory(libtestutils)
-add_subdirectory(libweb3core)
-add_subdirectory(libdevcrypto)
-add_subdirectory(libp2p)
-add_subdirectory(libdevcore)
-add_subdirectory(libweb3jsonrpc)
-add_subdirectory(libwhisper)
-add_subdirectory(libevm)
-add_subdirectory(external-dependencies)
+set(unittest_sources
+    unittests/libdevcore/CommonJS.cpp
+    unittests/libdevcore/core.cpp
+    unittests/libdevcore/FixedHash.cpp
+    unittests/libdevcore/RangeMask.cpp
+    unittests/libdevcore/RLP.cpp
 
-set(SRC_LIST ${SRC_LIST} ${SRC})
+    unittests/libdevcrypto/AES.cpp
+
+    unittests/libethashseal/EthashTest.cpp
+
+    unittests/libethcore/BlockHeader.cpp
+    unittests/libethcore/CommonJS.cpp
+    unittests/libethcore/KeyManager.cpp
+
+    unittests/libethereum/ValidationSchemes.cpp
+
+    unittests/libp2p/capability.cpp
+    unittests/libp2p/eip-8.cpp
+    unittests/libp2p/rlpx.cpp
+
+    unittests/libweb3core/memorydb.cpp
+    unittests/libweb3core/overlaydb.cpp
+    unittests/libweb3core/statecachedb.cpp
+
+    unittests/libweb3jsonrpc/AccountHolder.cpp
+)
+
+add_executable(aleth-unittests ${unittest_sources})
+target_include_directories(aleth-unittests PRIVATE ${UTILS_INCLUDE_DIR})
+target_link_libraries(aleth-unittests PRIVATE
+    web3jsonrpc ethashseal devcrypto devcore
+    GTest::gtest GTest::main
+)
+gtest_add_tests(TARGET aleth-unittests TEST_PREFIX unittests/ TEST_LIST unittests)
+set_tests_properties(${unittests} PROPERTIES TIMEOUT ${timeout})
+
+
+file(GLOB_RECURSE sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "*.cpp" "*.h" "*.sol" )
+
+# Skip unit tests included in aleth-unittests.
+list(REMOVE_ITEM sources ${unittest_sources})
 
 # search for test names and create ctest tests
-enable_testing()
-foreach(file ${SRC_LIST})
-	file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/${file} test_list_raw REGEX "BOOST_.*TEST_(SUITE|CASE)")
-	set(TestSuite "DEFAULT")
-	foreach(test_raw ${test_list_raw})
-		string(REGEX REPLACE ".*TEST_(SUITE|CASE)\\(([^ ,\\)]*).*" "\\1 \\2" test ${test_raw})
-		if(test MATCHES "^SUITE .*")
-			string(SUBSTRING ${test} 6 -1 TestSuite)
-		elseif(test MATCHES "^CASE .*")
-			string(SUBSTRING ${test} 5 -1 TestCase)
-			add_test(NAME ${TestSuite}/${TestCase} WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/test COMMAND testeth -t ${TestSuite}/${TestCase})
-		endif(test MATCHES "^SUITE .*")
-	endforeach(test_raw)
+set(excludeSuites jsonrpc \"customTestSuite\" BlockQueueSuite)
+set(allSuites jsonrpc)
+foreach(file ${sources})
+    file(STRINGS ${file} test_list_raw REGEX "BOOST_.*TEST_(SUITE|CASE|SUITE_END)")
+    set(TestSuite "DEFAULT")
+    set(TestSuitePath "")
+    foreach(test_raw ${test_list_raw})
+        string(REGEX REPLACE ".*TEST_(SUITE|CASE)\\(([^ ,\\)]*).*" "\\1 \\2" test ${test_raw})
+
+        #skip disabled
+        if (";${excludeSuites};" MATCHES ";${TestSuite};")
+            continue()
+        endif()
+
+        if(test MATCHES "^SUITE .*")
+
+            string(SUBSTRING ${test} 6 -1 TestSuite)
+            set(TestSuitePath "${TestSuitePath}/${TestSuite}")
+
+            if(FASTCTEST)
+                if (";${excludeSuites};" MATCHES ";${TestSuite};")
+                    continue()
+                endif()
+                if (NOT ";${allSuites};" MATCHES ";${TestSuite};")
+                    string(SUBSTRING ${TestSuitePath} 1 -1 TestSuitePathFixed)
+                    list(APPEND allSuites ${TestSuite})
+                    separate_arguments(TESTETH_ARGS)
+                    set(TestEthArgs -t ${TestSuitePathFixed} -- ${TESTETH_ARGS})
+                    add_test(NAME ${TestSuitePathFixed} WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/test COMMAND testeth ${TestEthArgs})
+                    set_tests_properties(${TestSuitePathFixed} PROPERTIES TIMEOUT ${timeout})
+                endif()
+            endif()
+        elseif(test MATCHES "^CASE .*")
+            if(NOT FASTCTEST)
+                if(NOT test MATCHES "^CASE &createRandom.*")
+                    string(SUBSTRING ${test} 5 -1 TestCase)
+                    string(SUBSTRING ${TestSuitePath} 1 -1 TestSuitePathFixed)
+                    separate_arguments(TESTETH_ARGS)
+                    set(TestEthArgs -t ${TestSuitePathFixed}/${TestCase} -- ${TESTETH_ARGS})
+                    add_test(NAME ${TestSuitePathFixed}/${TestCase} WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/test COMMAND testeth ${TestEthArgs})
+                    set_tests_properties(${TestSuitePathFixed}/${TestCase} PROPERTIES TIMEOUT ${timeout})
+                endif()
+            endif()
+        elseif (";${test_raw};" MATCHES "BOOST_AUTO_TEST_SUITE_END()")
+            #encountered SUITE_END block. remove one test suite from the suite path.
+            string(FIND ${TestSuitePath} "/" Position REVERSE)
+            string(SUBSTRING ${TestSuitePath} 0 ${Position} TestSuitePath)
+        endif()
+    endforeach(test_raw)
 endforeach(file)
 
-file(GLOB_RECURSE HEADERS "*.h")
-add_executable(testeth ${SRC_LIST} ${HEADERS})
+hunter_add_package(yaml-cpp)
+find_package(yaml-cpp CONFIG REQUIRED)
 
-find_package(Eth)
-find_package(Web3)
+add_executable(testeth ${sources})
+target_include_directories(testeth PRIVATE ${UTILS_INCLUDE_DIR})
+target_link_libraries(testeth PRIVATE ethereum ethashseal web3jsonrpc devcrypto devcore aleth-buildinfo cryptopp-static yaml-cpp::yaml-cpp binaryen::binaryen libjson-rpc-cpp::client)
+install(TARGETS testeth DESTINATION ${CMAKE_INSTALL_BINDIR})
 
-target_include_directories(testeth PRIVATE ..)
-target_include_directories(testeth PRIVATE ../utils)
-
-target_link_libraries(testeth Boost::UnitTestFramework)
-target_link_libraries(testeth ${Eth_TESTUTILS_LIBRARIES})
-
-if (UNIX AND NOT APPLE)
-	target_link_libraries(testeth pthread)
-endif()
-
-target_link_libraries(testeth ${Web3_WEB3JSONRPC_LIBRARIES})
-target_link_libraries(testeth ${Web3_WEBTHREE_LIBRARIES})
-
-enable_testing()
-set(CTEST_OUTPUT_ON_FAILURE TRUE)
+set_property(SOURCE tools/libtesteth/TestHelper.cpp PROPERTY COMPILE_DEFINITIONS BINARYEN_VERSION=${BINARYEN_VERSION})
 
 include(EthUtils)
 
 eth_add_test(ClientBase
-	ARGS --eth_testfile=BlockTests/bcJS_API_Test --eth_threads=1
-	ARGS --eth_testfile=BlockTests/bcJS_API_Test --eth_threads=3
-	ARGS --eth_testfile=BlockTests/bcJS_API_Test --eth_threads=10
-	ARGS --eth_testfile=BlockTests/bcValidBlockTest --eth_threads=1
-	ARGS --eth_testfile=BlockTests/bcValidBlockTest --eth_threads=3
-	ARGS --eth_testfile=BlockTests/bcValidBlockTest --eth_threads=10
+    ARGS --eth_testfile=BlockTests/bcJS_API_Test --eth_threads=1
+    ARGS --eth_testfile=BlockTests/bcJS_API_Test --eth_threads=3
+    ARGS --eth_testfile=BlockTests/bcJS_API_Test --eth_threads=10
+    ARGS --eth_testfile=BlockTests/bcValidBlockTest --eth_threads=1
+    ARGS --eth_testfile=BlockTests/bcValidBlockTest --eth_threads=3
+    ARGS --eth_testfile=BlockTests/bcValidBlockTest --eth_threads=10
 )
 
-eth_add_test(JsonRpc
-	ARGS --eth_testfile=BlockTests/bcJS_API_Test 
-	ARGS --eth_testfile=BlockTests/bcValidBlockTest
-)
+#Does not work
+#eth_add_test(JsonRpc
+#   ARGS --eth_testfile=BlockTests/bcJS_API_Test
+#   ARGS --eth_testfile=BlockTests/bcValidBlockTest
+#)
 

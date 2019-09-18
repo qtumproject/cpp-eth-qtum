@@ -22,10 +22,10 @@
 #pragma once
 
 #include <json/json.h>
+#include <libp2p/Common.h>
 #include <libethcore/Common.h>
 #include <libethcore/BlockHeader.h>
 #include <libethereum/LogFilter.h>
-#include <libwhisper/Message.h>
 
 namespace dev
 {
@@ -60,6 +60,7 @@ Json::Value toJson(BlockHeader const& _bi, BlockDetails const& _bd, UncleHashes 
 Json::Value toJson(BlockHeader const& _bi, BlockDetails const& _bd, UncleHashes const& _us, TransactionHashes const& _ts, SealEngineFace* _face = nullptr);
 Json::Value toJson(TransactionSkeleton const& _t);
 Json::Value toJson(Transaction const& _t);
+Json::Value toJson(Transaction const& _t, bytes const& _rlp);
 Json::Value toJson(LocalisedTransaction const& _t);
 Json::Value toJson(TransactionReceipt const& _t);
 Json::Value toJson(LocalisedTransactionReceipt const& _t);
@@ -76,16 +77,6 @@ class AddressResolver
 public:
 	static Address fromJS(std::string const& _address);
 };
-
-}
-
-namespace shh
-{
-
-Json::Value toJson(h256 const& _h, Envelope const& _e, Message const& _m);
-Message toMessage(Json::Value const& _json);
-Envelope toSealed(Json::Value const& _json, Message const& _m, Secret const& _from);
-std::pair<Topics, Public> toWatch(Json::Value const& _json);
 
 }
 

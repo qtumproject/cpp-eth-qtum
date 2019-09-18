@@ -1,59 +1,37 @@
-/*
-	This file is part of cpp-ethereum.
-
-	cpp-ethereum is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-
-	cpp-ethereum is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with cpp-ethereum.  If not, see <http://www.gnu.org/licenses/>.
-*/
-/** @file Host.h
- * @author Alex Leverington <nessence@gmail.com>
- * @author Gav Wood <i@gavwood.com>
- * @date 2014
- */
+// Aleth: Ethereum C++ client, tools and libraries.
+// Copyright 2019 Aleth Authors.
+// Licensed under the GNU General Public License, Version 3.
 
 #pragma once
 
-#include <mutex>
-#include <map>
-#include <vector>
-#include <set>
-#include <memory>
-#include <utility>
-#include <thread>
-#include <chrono>
-
+#include "Common.h"
+#include "Network.h"
+#include "NodeTable.h"
+#include "Peer.h"
+#include "RLPXSocket.h"
 #include <libdevcore/Guards.h>
 #include <libdevcore/Worker.h>
 #include <libdevcrypto/Common.h>
-#include <libdevcrypto/ECDHE.h>
-#include "NodeTable.h"
-#include "HostCapability.h"
-#include "Network.h"
-#include "Peer.h"
-#include "RLPXSocket.h"
-#include "RLPXFrameCoder.h"
-#include "Common.h"
-namespace ba = boost::asio;
-namespace bi = ba::ip;
+#include <chrono>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <set>
+#include <thread>
+#include <utility>
+#include <vector>
+namespace io = boost::asio;
+namespace bi = io::ip;
 
 namespace std
 {
 template<> struct hash<pair<dev::p2p::NodeID, string>>
 {
-	size_t operator()(pair<dev::p2p::NodeID, string> const& _value) const
-	{
-		size_t ret = hash<dev::p2p::NodeID>()(_value.first);
-		return ret ^ (hash<string>()(_value.second) + 0x9e3779b9 + (ret << 6) + (ret >> 2));
-	}
+    size_t operator()(pair<dev::p2p::NodeID, string> const& _value) const
+    {
+        size_t ret = hash<dev::p2p::NodeID>()(_value.first);
+        return ret ^ (hash<string>()(_value.second) + 0x9e3779b9 + (ret << 6) + (ret >> 2));
+    }
 };
 }
 
@@ -62,61 +40,63 @@ namespace dev
 
 namespace p2p
 {
-
+class CapabilityFace;
+class CapabilityHostFace;
 class Host;
+class SessionFace;
+class RLPXFrameCoder;
+class RLPXHandshake;
 
 class HostNodeTableHandler: public NodeTableEventHandler
 {
 public:
-	HostNodeTableHandler(Host& _host);
+    HostNodeTableHandler(Host& _host);
 
-	Host const& host() const { return m_host; }
+    Host const& host() const { return m_host; }
 
 private:
-	virtual void processEvent(NodeID const& _n, NodeTableEventType const& _e);
+    virtual void processEvent(NodeID const& _n, NodeTableEventType const& _e);
 
-	Host& m_host;
+    Host& m_host;
 };
 
 struct SubReputation
 {
-	bool isRude = false;
-	int utility = 0;
-	bytes data;
+    bool isRude = false;
+    int utility = 0;
+    bytes data;
 };
 
 struct Reputation
 {
-	std::unordered_map<std::string, SubReputation> subs;
+    std::unordered_map<std::string, SubReputation> subs;
 };
 
 class ReputationManager
 {
 public:
-	ReputationManager();
-
-	void noteRude(SessionFace const& _s, std::string const& _sub = std::string());
-	bool isRude(SessionFace const& _s, std::string const& _sub = std::string()) const;
-	void setData(SessionFace const& _s, std::string const& _sub, bytes const& _data);
-	bytes data(SessionFace const& _s, std::string const& _subs) const;
+    void noteRude(SessionFace const& _s, std::string const& _sub = std::string());
+    bool isRude(SessionFace const& _s, std::string const& _sub = std::string()) const;
+    void setData(SessionFace const& _s, std::string const& _sub, bytes const& _data);
+    bytes data(SessionFace const& _s, std::string const& _subs) const;
 
 private:
-	std::unordered_map<std::pair<p2p::NodeID, std::string>, Reputation> m_nodes;	///< Nodes that were impolite while syncing. We avoid syncing from these if possible.
-	SharedMutex mutable x_nodes;
+    std::unordered_map<std::pair<p2p::NodeID, std::string>, Reputation> m_nodes;	///< Nodes that were impolite while syncing. We avoid syncing from these if possible.
+    SharedMutex mutable x_nodes;
 };
 
 struct NodeInfo
 {
-	NodeInfo() = default;
-	NodeInfo(NodeID const& _id, std::string const& _address, unsigned _port, std::string const& _version):
-		id(_id), address(_address), port(_port), version(_version) {}
+    NodeInfo() = default;
+    NodeInfo(NodeID const& _id, std::string const& _address, unsigned _port, std::string const& _version):
+        id(_id), address(_address), port(_port), version(_version) {}
 
-	std::string enode() const { return "enode://" + id.hex() + "@" + address + ":" + toString(port); }
+    std::string enode() const { return "enode://" + id.hex() + "@" + address + ":" + toString(port); }
 
-	NodeID id;
-	std::string address;
-	unsigned port;
-	std::string version;
+    NodeID id;
+    std::string address;
+    unsigned port;
+    std::string version;
 };
 
 /**
@@ -128,219 +108,256 @@ struct NodeInfo
  */
 class Host: public Worker
 {
-	friend class HostNodeTableHandler;
-	friend class RLPXHandshake;
-	
-	friend class Session;
-	friend class HostCapabilityFace;
+    friend class HostNodeTableHandler;
+    friend class RLPXHandshake;
+    
+    friend class Session;
 
 public:
-	/// Start server, listening for connections on the given port.
-	Host(
-		std::string const& _clientVersion,
-		NetworkPreferences const& _n = NetworkPreferences(),
-		bytesConstRef _restoreNetwork = bytesConstRef()
-	);
+    /// Start server, listening for connections on the given port.
+    Host(
+        std::string const& _clientVersion,
+        NetworkConfig const& _n = NetworkConfig{},
+        bytesConstRef _restoreNetwork = bytesConstRef()
+    );
 
-	/// Alternative constructor that allows providing the node key directly
-	/// without restoring the network.
-	Host(
-		std::string const& _clientVersion,
-		KeyPair const& _alias,
-		NetworkPreferences const& _n = NetworkPreferences()
-	);
+    /// Alternative constructor that allows providing the node key directly
+    /// without restoring the network.
+    Host(
+        std::string const& _clientVersion,
+        KeyPair const& _alias,
+        NetworkConfig const& _n = NetworkConfig{}
+    );
 
-	/// Will block on network process events.
-	virtual ~Host();
+    /// Will block on network process events.
+    virtual ~Host();
 
-	/// Default hosts for current version of client.
-	static std::unordered_map<Public, std::string> pocHosts();
+    /// Default hosts for current version of client.
+    static std::unordered_map<Public, std::string> pocHosts();
 
-	/// Register a peer-capability; all new peer connections will have this capability.
-	template <class T> std::shared_ptr<T> registerCapability(std::shared_ptr<T> const& _t) { _t->m_host = this; m_capabilities[std::make_pair(T::staticName(), T::staticVersion())] = _t; return _t; }
-	template <class T> void addCapability(std::shared_ptr<T> const & _p, std::string const& _name, u256 const& _version) { m_capabilities[std::make_pair(_name, _version)] = _p; }
+    /// Register a host capability; all new peer connections will see this capability.
+    void registerCapability(std::shared_ptr<CapabilityFace> const& _cap);
 
-	bool haveCapability(CapDesc const& _name) const { return m_capabilities.count(_name) != 0; }
-	CapDescs caps() const { CapDescs ret; for (auto const& i: m_capabilities) ret.push_back(i.first); return ret; }
-	template <class T> std::shared_ptr<T> cap() const { try { return std::static_pointer_cast<T>(m_capabilities.at(std::make_pair(T::staticName(), T::staticVersion()))); } catch (...) { return nullptr; } }
+    /// Register a host capability with arbitrary name and version.
+    /// Might be useful when you want to handle several subprotocol versions with a single
+    /// capability class.
+    void registerCapability(std::shared_ptr<CapabilityFace> const& _cap, std::string const& _name,
+        unsigned _version);
 
-	/// Add a potential peer.
-	void addPeer(NodeSpec const& _s, PeerType _t);
+    bool haveCapability(CapDesc const& _name) const { return m_capabilities.count(_name) != 0; }
+    bool haveCapabilities() const { return !caps().empty(); }
+    CapDescs caps() const { CapDescs ret; for (auto const& i: m_capabilities) ret.push_back(i.first); return ret; }
 
-	/// Add node as a peer candidate. Node is added if discovery ping is successful and table has capacity.
-	void addNode(NodeID const& _node, NodeIPEndpoint const& _endpoint);
-	
-	/// Create Peer and attempt keeping peer connected.
-	void requirePeer(NodeID const& _node, NodeIPEndpoint const& _endpoint);
+    /// Add a potential peer.
+    void addPeer(NodeSpec const& _s, PeerType _t);
 
-	/// Create Peer and attempt keeping peer connected.
-	void requirePeer(NodeID const& _node, bi::address const& _addr, unsigned short _udpPort, unsigned short _tcpPort) { requirePeer(_node, NodeIPEndpoint(_addr, _udpPort, _tcpPort)); }
+    /// Add node as a peer candidate. Node is added if discovery ping is successful and table has capacity.
+    void addNode(NodeID const& _node, NodeIPEndpoint const& _endpoint);
+    
+    /// Create Peer and attempt keeping peer connected.
+    void requirePeer(NodeID const& _node, NodeIPEndpoint const& _endpoint);
 
-	/// Note peer as no longer being required.
-	void relinquishPeer(NodeID const& _node);
-	
-	/// Set ideal number of peers.
-	void setIdealPeerCount(unsigned _n) { m_idealPeerCount = _n; }
+    /// Create Peer and attempt keeping peer connected.
+    void requirePeer(NodeID const& _node, bi::address const& _addr, unsigned short _udpPort, unsigned short _tcpPort) { requirePeer(_node, NodeIPEndpoint(_addr, _udpPort, _tcpPort)); }
 
-	/// Set multipier for max accepted connections.
-	void setPeerStretch(unsigned _n) { m_stretchPeers = _n; }
-	
-	/// Get peer information.
-	PeerSessionInfos peerSessionInfo() const;
+    /// returns true if a member of m_requiredPeers
+    bool isRequiredPeer(NodeID const&) const;
 
-	/// Get number of peers connected.
-	size_t peerCount() const;
+    /// Note peer as no longer being required.
+    void relinquishPeer(NodeID const& _node);
+    
+    /// Set ideal number of peers.
+    void setIdealPeerCount(unsigned _n) { m_idealPeerCount = _n; }
 
-	/// Get the address we're listening on currently.
-	std::string listenAddress() const { return m_tcpPublic.address().is_unspecified() ? "0.0.0.0" : m_tcpPublic.address().to_string(); }
+    /// Set multipier for max accepted connections.
+    void setPeerStretch(unsigned _n) { m_stretchPeers = _n; }
+    
+    /// Get peer information.
+    PeerSessionInfos peerSessionInfo() const;
 
-	/// Get the port we're listening on currently.
-	unsigned short listenPort() const { return std::max(0, m_listenPort); }
+    /// Get number of peers connected.
+    size_t peerCount() const;
 
-	/// Serialise the set of known peers.
-	bytes saveNetwork() const;
+    /// Get the address we're listening on currently.
+    std::string listenAddress() const { return m_tcpPublic.address().is_unspecified() ? "0.0.0.0" : m_tcpPublic.address().to_string(); }
 
-	// TODO: P2P this should be combined with peers into a HostStat object of some kind; coalesce data, as it's only used for status information.
-	Peers getPeers() const { RecursiveGuard l(x_sessions); Peers ret; for (auto const& i: m_peers) ret.push_back(*i.second); return ret; }
+    /// Get the port we're listening on currently.
+    unsigned short listenPort() const { return std::max(0, m_listenPort.load()); }
 
-	NetworkPreferences const& networkPreferences() const { return m_netPrefs; }
+    /// Serialise the set of known peers.
+    bytes saveNetwork() const;
 
-	void setNetworkPreferences(NetworkPreferences const& _p, bool _dropPeers = false) { m_dropPeers = _dropPeers; auto had = isStarted(); if (had) stop(); m_netPrefs = _p; if (had) start(); }
+    // TODO: P2P this should be combined with peers into a HostStat object of some kind; coalesce data, as it's only used for status information.
+    Peers getPeers() const { RecursiveGuard l(x_sessions); Peers ret; for (auto const& i: m_peers) ret.push_back(*i.second); return ret; }
 
-	/// Start network. @threadsafe
-	void start();
+    NetworkConfig const& networkConfig() const { return m_netConfig; }
 
-	/// Stop network. @threadsafe
-	/// Resets acceptor, socket, and IO service. Called by deallocator.
-	void stop();
+    /// Start network. @threadsafe
+    void start();
 
-	/// @returns if network has been started.
-	bool isStarted() const { return isWorking(); }
+    /// Stop network. @threadsafe
+    /// Resets acceptor, socket, and IO service. Called by deallocator.
+    void stop();
 
-	/// @returns our reputation manager.
-	ReputationManager& repMan() { return m_repMan; }
+    /// @returns if network has been started.
+    bool isStarted() const { return isWorking(); }
 
-	/// @returns if network is started and interactive.
-	bool haveNetwork() const { Guard l(x_runTimer); return m_run && !!m_nodeTable; }
-	
-	/// Validates and starts peer session, taking ownership of _io. Disconnects and returns false upon error.
-	void startPeerSession(Public const& _id, RLP const& _hello, std::unique_ptr<RLPXFrameCoder>&& _io, std::shared_ptr<RLPXSocket> const& _s);
+    /// @returns our reputation manager.
+    ReputationManager& repMan() { return m_repMan; }
 
-	/// Get session by id
-	std::shared_ptr<SessionFace> peerSession(NodeID const& _id) { RecursiveGuard l(x_sessions); return m_sessions.count(_id) ? m_sessions[_id].lock() : std::shared_ptr<SessionFace>(); }
+    /// @returns if network is started and interactive.
+    bool haveNetwork() const { return m_run; }
+    
+    /// Validates and starts peer session, taking ownership of _io. Disconnects and returns false upon error.
+    void startPeerSession(Public const& _id, RLP const& _hello, std::unique_ptr<RLPXFrameCoder>&& _io, std::shared_ptr<RLPXSocket> const& _s);
 
-	/// Get our current node ID.
-	NodeID id() const { return m_alias.pub(); }
+    /// Get session by id
+    std::shared_ptr<SessionFace> peerSession(NodeID const& _id) const
+    {
+        RecursiveGuard l(x_sessions);
+        return m_sessions.count(_id) ? m_sessions[_id].lock() : std::shared_ptr<SessionFace>();
+    }
 
-	/// Get the public TCP endpoint.
-	bi::tcp::endpoint const& tcpPublic() const { return m_tcpPublic; }
+    /// Get our current node ID.
+    NodeID id() const { return m_alias.pub(); }
 
-	/// Get the public endpoint information.
-	std::string enode() const { return "enode://" + id().hex() + "@" + (networkPreferences().publicIPAddress.empty() ? m_tcpPublic.address().to_string() : networkPreferences().publicIPAddress) + ":" + toString(m_tcpPublic.port()); }
+    /// Get the public TCP endpoint.
+    bi::tcp::endpoint const& tcpPublic() const { return m_tcpPublic; }
 
-	/// Get the node information.
-	p2p::NodeInfo nodeInfo() const { return NodeInfo(id(), (networkPreferences().publicIPAddress.empty() ? m_tcpPublic.address().to_string() : networkPreferences().publicIPAddress), m_tcpPublic.port(), m_clientVersion); }
+    /// Get the public endpoint information.
+    std::string enode() const { return "enode://" + id().hex() + "@" + (networkConfig().publicIPAddress.empty() ? m_tcpPublic.address().to_string() : networkConfig().publicIPAddress) + ":" + toString(m_tcpPublic.port()); }
+
+    /// Get the node information.
+    p2p::NodeInfo nodeInfo() const { return NodeInfo(id(), (networkConfig().publicIPAddress.empty() ? m_tcpPublic.address().to_string() : networkConfig().publicIPAddress), m_tcpPublic.port(), m_clientVersion); }
+
+    /// Apply function to each session
+    void forEachPeer(
+        std::string const& _capabilityName, std::function<bool(NodeID const&)> _f) const;
+
+    void scheduleExecution(int _delayMs, std::function<void()> _f);
+
+    std::shared_ptr<CapabilityHostFace> capabilityHost() const { return m_capabilityHost; }
 
 protected:
-	void onNodeTableEvent(NodeID const& _n, NodeTableEventType const& _e);
+    void onNodeTableEvent(NodeID const& _n, NodeTableEventType const& _e);
 
-	/// Deserialise the data and populate the set of known peers.
-	void restoreNetwork(bytesConstRef _b);
+    /// Deserialise the data and populate the set of known peers.
+    void restoreNetwork(bytesConstRef _b);
 
 private:
-	enum PeerSlotType { Egress, Ingress };
-	
-	unsigned peerSlots(PeerSlotType _type) { return _type == Egress ? m_idealPeerCount : m_idealPeerCount * m_stretchPeers; }
-	
-	bool havePeerSession(NodeID const& _id) { return !!peerSession(_id); }
+    enum PeerSlotType { Egress, Ingress };
+    
+    unsigned peerSlots(PeerSlotType _type) { return _type == Egress ? m_idealPeerCount : m_idealPeerCount * m_stretchPeers; }
+    
+    bool havePeerSession(NodeID const& _id) { return !!peerSession(_id); }
 
-	/// Determines and sets m_tcpPublic to publicly advertised address.
-	void determinePublic();
+    /// Determines and sets m_tcpPublic to publicly advertised address.
+    void determinePublic();
 
-	void connect(std::shared_ptr<Peer> const& _p);
+    void connect(std::shared_ptr<Peer> const& _p);
 
-	/// Returns true if pending and connected peer count is less than maximum
-	bool peerSlotsAvailable(PeerSlotType _type = Ingress) { Guard l(x_pendingNodeConns); return peerCount() + m_pendingPeerConns.size() < peerSlots(_type); }
-	
-	/// Ping the peers to update the latency information and disconnect peers which have timed out.
-	void keepAlivePeers();
+    /// Returns true if pending and connected peer count is less than maximum
+    bool peerSlotsAvailable(PeerSlotType _type = Ingress);
+    
+    /// Ping the peers to update the latency information and disconnect peers which have timed out.
+    void keepAlivePeers();
 
-	/// Disconnect peers which didn't respond to keepAlivePeers ping prior to c_keepAliveTimeOut.
-	void disconnectLatePeers();
+    /// Disconnect peers which didn't respond to keepAlivePeers ping prior to c_keepAliveTimeOut.
+    void disconnectLatePeers();
 
-	/// Called only from startedWorking().
-	void runAcceptor();
+    /// Called only from startedWorking().
+    void runAcceptor();
 
-	/// Called by Worker. Not thread-safe; to be called only by worker.
-	virtual void startedWorking();
-	/// Called by startedWorking. Not thread-safe; to be called only be Worker.
-	void run(boost::system::error_code const& error);			///< Run network. Called serially via ASIO deadline timer. Manages connection state transitions.
+    /// Called by Worker. Not thread-safe; to be called only by worker.
+    virtual void startedWorking();
+    /// Called by startedWorking. Not thread-safe; to be called only be Worker.
+    void run(boost::system::error_code const& error);			///< Run network. Called serially via ASIO deadline timer. Manages connection state transitions.
 
-	/// Run network. Not thread-safe; to be called only by worker.
-	virtual void doWork();
+    /// Run network. Not thread-safe; to be called only by worker.
+    virtual void doWork();
 
-	/// Shutdown network. Not thread-safe; to be called only by worker.
-	virtual void doneWorking();
+    /// Shutdown network. Not thread-safe; to be called only by worker.
+    virtual void doneWorking();
 
-	/// Get or create host identifier (KeyPair).
-	static KeyPair networkAlias(bytesConstRef _b);
+    /// Get or create host identifier (KeyPair).
+    static KeyPair networkAlias(bytesConstRef _b);
 
-	bytes m_restoreNetwork;										///< Set by constructor and used to set Host key and restore network peers & nodes.
+    bool nodeTableHasNode(Public const& _id) const;
+    Node nodeFromNodeTable(Public const& _id) const;
+    bool addNodeToNodeTable(Node const& _node);
 
-	bool m_run = false;													///< Whether network is running.
-	mutable std::mutex x_runTimer;	///< Start/stop mutex.
+    bool addKnownNodeToNodeTable(
+        Node const& _node, uint32_t _lastPongReceivedTime, uint32_t _lastPongSentTime);
 
-	std::string m_clientVersion;											///< Our version string.
+    /// Determines if a node with the supplied endpoint should be included in or restored from the
+    /// serialized network configuration data
+    bool isAllowedEndpoint(NodeIPEndpoint const& _endpointToCheck) const
+    {
+        return dev::p2p::isAllowedEndpoint(m_netConfig.allowLocalDiscovery, _endpointToCheck);
+    }
 
-	NetworkPreferences m_netPrefs;										///< Network settings.
+    bytes m_restoreNetwork;										///< Set by constructor and used to set Host key and restore network peers & nodes.
 
-	/// Interface addresses (private, public)
-	std::set<bi::address> m_ifAddresses;								///< Interface addresses.
+    std::atomic<bool> m_run{false};													///< Whether network is running.
 
-	int m_listenPort = -1;												///< What port are we listening on. -1 means binding failed or acceptor hasn't been initialized.
+    std::string m_clientVersion;											///< Our version string.
 
-	ba::io_service m_ioService;											///< IOService for network stuff.
-	bi::tcp::acceptor m_tcp4Acceptor;										///< Listening acceptor.
+    NetworkConfig m_netConfig;										        ///< Network settings.
 
-	std::unique_ptr<boost::asio::deadline_timer> m_timer;					///< Timer which, when network is running, calls scheduler() every c_timerInterval ms.
-	static const unsigned c_timerInterval = 100;							///< Interval which m_timer is run when network is connected.
+    /// Interface addresses (private, public)
+    std::set<bi::address> m_ifAddresses;								///< Interface addresses.
 
-	std::set<Peer*> m_pendingPeerConns;									/// Used only by connect(Peer&) to limit concurrently connecting to same node. See connect(shared_ptr<Peer>const&).
-	Mutex x_pendingNodeConns;
+    std::atomic<int> m_listenPort{-1};												///< What port are we listening on. -1 means binding failed or acceptor hasn't been initialized.
 
-	bi::tcp::endpoint m_tcpPublic;											///< Our public listening endpoint.
-	KeyPair m_alias;															///< Alias for network communication. Network address is k*G. k is key material. TODO: Replace KeyPair.
-	std::shared_ptr<NodeTable> m_nodeTable;									///< Node table (uses kademlia-like discovery).
+    io::io_service m_ioService;											///< IOService for network stuff.
+    bi::tcp::acceptor m_tcp4Acceptor;										///< Listening acceptor.
 
-	/// Shared storage of Peer objects. Peers are created or destroyed on demand by the Host. Active sessions maintain a shared_ptr to a Peer;
-	std::unordered_map<NodeID, std::shared_ptr<Peer>> m_peers;
-	
-	/// Peers we try to connect regardless of p2p network.
-	std::set<NodeID> m_requiredPeers;
-	Mutex x_requiredPeers;
+    /// Timer which, when network is running, calls run() every c_timerInterval ms.
+    io::deadline_timer m_timer;
 
-	/// The nodes to which we are currently connected. Used by host to service peer requests and keepAlivePeers and for shutdown. (see run())
-	/// Mutable because we flush zombie entries (null-weakptrs) as regular maintenance from a const method.
-	mutable std::unordered_map<NodeID, std::weak_ptr<SessionFace>> m_sessions;
-	mutable RecursiveMutex x_sessions;
-	
-	std::list<std::weak_ptr<RLPXHandshake>> m_connecting;					///< Pending connections.
-	Mutex x_connecting;													///< Mutex for m_connecting.
+    static constexpr unsigned c_timerInterval = 100;							///< Interval which m_timer is run when network is connected.
 
-	unsigned m_idealPeerCount = 11;										///< Ideal number of peers to be connected to.
-	unsigned m_stretchPeers = 7;										///< Accepted connection multiplier (max peers = ideal*stretch).
+    std::set<Peer*> m_pendingPeerConns;									/// Used only by connect(Peer&) to limit concurrently connecting to same node. See connect(shared_ptr<Peer>const&).
 
-	std::map<CapDesc, std::shared_ptr<HostCapabilityFace>> m_capabilities;	///< Each of the capabilities we support.
-	
-	/// Deadline timers used for isolated network events. GC'd by run.
-	std::list<std::shared_ptr<boost::asio::deadline_timer>> m_timers;
-	Mutex x_timers;
+    bi::tcp::endpoint m_tcpPublic;											///< Our public listening endpoint.
+    KeyPair m_alias;															///< Alias for network communication. Network address is k*G. k is key material. TODO: Replace KeyPair.
+    std::shared_ptr<NodeTable> m_nodeTable;									///< Node table (uses kademlia-like discovery).
+    mutable std::mutex x_nodeTable;
+    std::shared_ptr<NodeTable> nodeTable() const { Guard l(x_nodeTable); return m_nodeTable; }
 
-	std::chrono::steady_clock::time_point m_lastPing;						///< Time we sent the last ping to all peers.
-	bool m_accepting = false;
-	bool m_dropPeers = false;
+    /// Shared storage of Peer objects. Peers are created or destroyed on demand by the Host. Active sessions maintain a shared_ptr to a Peer;
+    std::unordered_map<NodeID, std::shared_ptr<Peer>> m_peers;
+    
+    /// Peers we try to connect regardless of p2p network.
+    std::set<NodeID> m_requiredPeers;
+    mutable Mutex x_requiredPeers;
 
-	ReputationManager m_repMan;
+    /// The nodes to which we are currently connected. Used by host to service peer requests and keepAlivePeers and for shutdown. (see run())
+    /// Mutable because we flush zombie entries (null-weakptrs) as regular maintenance from a const method.
+    mutable std::unordered_map<NodeID, std::weak_ptr<SessionFace>> m_sessions;
+    mutable RecursiveMutex x_sessions;
+
+    std::list<std::weak_ptr<RLPXHandshake>> m_connecting;               ///< Pending connections.
+    Mutex x_connecting;													///< Mutex for m_connecting.
+
+    unsigned m_idealPeerCount = 11;										///< Ideal number of peers to be connected to.
+    unsigned m_stretchPeers = 7;										///< Accepted connection multiplier (max peers = ideal*stretch).
+
+    /// Each of the capabilities we support.
+    std::map<CapDesc, std::shared_ptr<CapabilityFace>> m_capabilities;
+
+    /// Deadline timers used for isolated network events. GC'd by run.
+    std::list<std::unique_ptr<io::deadline_timer>> m_timers;
+    Mutex x_timers;
+
+    std::chrono::steady_clock::time_point m_lastPing;						///< Time we sent the last ping to all peers.
+    bool m_accepting = false;
+
+    ReputationManager m_repMan;
+
+    std::shared_ptr<CapabilityHostFace> m_capabilityHost;
+
+    Logger m_logger{createLogger(VerbosityDebug, "net")};
 };
 
 }

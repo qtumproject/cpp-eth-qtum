@@ -1,40 +1,23 @@
-/*
-	This file is part of cpp-ethereum.
-
-	cpp-ethereum is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-
-	cpp-ethereum is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with cpp-ethereum.  If not, see <http://www.gnu.org/licenses/>.
-*/
-/** @file AccountHolder.cpp
- * @authors:
- *   Christian R <c@ethdev.com>
- *   Lefteris Karapetsas <lefteris@ethdev.com>
- * @date 2015
- */
+// Aleth: Ethereum C++ client, tools and libraries.
+// Copyright 2019 Aleth Authors.
+// Licensed under the GNU General Public License, Version 3.
 
 #include "AccountHolder.h"
-#include <random>
 #include <libdevcore/Guards.h>
-#include <libethereum/Client.h>
 #include <libethcore/KeyManager.h>
-
+#include <libethereum/Client.h>
+#include <random>
 
 using namespace std;
 using namespace dev;
 using namespace dev::eth;
 
 vector<TransactionSkeleton> g_emptyQueue;
-static std::mt19937 g_randomNumberGenerator(utcTime());
-static Mutex x_rngMutex;
+namespace
+{
+mt19937_64 g_randomGenerator(random_device{}());
+Mutex x_rngMutex;
+}  // namespace
 
 vector<Address> AccountHolder::allAccounts() const
 {
@@ -46,28 +29,27 @@ vector<Address> AccountHolder::allAccounts() const
 	return accounts;
 }
 
-Address const& AccountHolder::defaultTransactAccount() const
+Address AccountHolder::defaultTransactAccount() const
 {
-	auto accounts = realAccounts();
-	if (accounts.empty())
-		return ZeroAddress;
-	Address const* bestMatch = &*accounts.begin();
-	for (auto const& account: accounts)
-		if (m_client()->balanceAt(account) > m_client()->balanceAt(*bestMatch))
-			bestMatch = &account;
-	return *bestMatch;
+    auto accounts = realAccounts();
+    auto* client = m_client();
+    auto best = std::max_element(
+        accounts.begin(), accounts.end(), [client](Address const& a, Address const& b) {
+            return client->balanceAt(a) < client->balanceAt(b);
+        });
+    return best != accounts.end() ? *best : Address{};
 }
 
 int AccountHolder::addProxyAccount(const Address& _account)
 {
-	Guard g(x_rngMutex);
-	int id = std::uniform_int_distribution<int>(1)(g_randomNumberGenerator);
-	id = int(u256(FixedHash<32>(sha3(bytesConstRef((byte*)(&id), sizeof(int) / sizeof(byte))))));
-	if (isProxyAccount(_account) || id == 0 || m_transactionQueues.count(id))
-		return 0;
-	m_proxyAccounts.insert(make_pair(_account, id));
-	m_transactionQueues[id].first = _account;
-	return id;
+    Guard g(x_rngMutex);
+    int id = std::uniform_int_distribution<int>(1)(g_randomGenerator);
+    id = int(u256(FixedHash<32>(sha3(bytesConstRef((byte*)(&id), sizeof(int) / sizeof(byte))))));
+    if (isProxyAccount(_account) || id == 0 || m_transactionQueues.count(id))
+        return 0;
+    m_proxyAccounts.insert(make_pair(_account, id));
+    m_transactionQueues[id].first = _account;
+    return id;
 }
 
 bool AccountHolder::removeProxyAccount(unsigned _id)
@@ -105,9 +87,9 @@ AddressHash SimpleAccountHolder::realAccounts() const
 	return m_keyManager.accountsHash();
 }
 
-TransactionNotification SimpleAccountHolder::authenticate(dev::eth::TransactionSkeleton const& _t)
+pair<bool, Secret> SimpleAccountHolder::authenticate(dev::eth::TransactionSkeleton const& _t)
 {
-	TransactionNotification ret;
+	pair<bool, Secret> ret;
 	bool locked = true;
 	if (m_unlockedAccounts.count(_t.from))
 	{
@@ -117,33 +99,27 @@ TransactionNotification SimpleAccountHolder::authenticate(dev::eth::TransactionS
 		if (start < end && chrono::steady_clock::now() < end)
 			locked = false;
 	}
-	ret.r = TransactionRepercussion::Locked;
+	
 	if (locked && m_getAuthorisation)
 	{
 		if (m_getAuthorisation(_t, isProxyAccount(_t.from)))
 			locked = false;
 		else
-			ret.r = TransactionRepercussion::Refused;
+			BOOST_THROW_EXCEPTION(TransactionRefused());
 	}
 	if (locked)
-		return ret;
+		BOOST_THROW_EXCEPTION(AccountLocked());
 	if (isRealAccount(_t.from))
 	{
 		if (Secret s = m_keyManager.secret(_t.from, [&](){ return m_getPassword(_t.from); }))
-		{
-			ret.r = TransactionRepercussion::Success;
-			tie(ret.hash, ret.created) = m_client()->submitTransaction(_t, s);
-		}
+			ret = make_pair(false, s);
 		else
-			ret.r = TransactionRepercussion::Locked;
+			BOOST_THROW_EXCEPTION(AccountLocked());
 	}
 	else if (isProxyAccount(_t.from))
-	{
-		ret.r = TransactionRepercussion::ProxySuccess;
-		queueTransaction(_t);
-	}
+		ret.first = true;
 	else
-		ret.r = TransactionRepercussion::UnknownAccount;
+		BOOST_THROW_EXCEPTION(UnknownAccount());
 	return ret;
 }
 
@@ -172,26 +148,24 @@ bool SimpleAccountHolder::unlockAccount(Address const& _account, string const& _
 	return true;
 }
 
-TransactionNotification FixedAccountHolder::authenticate(dev::eth::TransactionSkeleton const& _t)
+pair<bool, Secret> FixedAccountHolder::authenticate(dev::eth::TransactionSkeleton const& _t)
 {
-	TransactionNotification ret;
+	pair<bool, Secret> ret;
 	if (isRealAccount(_t.from))
 	{
 		if (m_accounts.count(_t.from))
 		{
-			ret.r = TransactionRepercussion::Success;
-			tie(ret.hash, ret.created) = m_client()->submitTransaction(_t, m_accounts[_t.from]);
+			ret = make_pair(false, m_accounts[_t.from]);
 		}
 		else
-			ret.r = TransactionRepercussion::Locked;
+			BOOST_THROW_EXCEPTION(AccountLocked());
 	}
 	else if (isProxyAccount(_t.from))
 	{
-		ret.r = TransactionRepercussion::ProxySuccess;
-		queueTransaction(_t);
+		ret.first = true;
 	}
 	else
-		ret.r = TransactionRepercussion::UnknownAccount;
+		BOOST_THROW_EXCEPTION(UnknownAccount());
 	return ret;
 }
 

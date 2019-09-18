@@ -1,36 +1,23 @@
-/*
-	This file is part of cpp-ethereum.
-
-	cpp-ethereum is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-
-	cpp-ethereum is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with cpp-ethereum.  If not, see <http://www.gnu.org/licenses/>.
-*/
-/** @file Common.h
- * @author Gav Wood <i@gavwood.com>
- * @date 2014
- *
- * Ethereum-specific data structures & algorithms.
- */
+// Aleth: Ethereum C++ client, tools and libraries.
+// Copyright 2019 Aleth Authors.
+// Licensed under the GNU General Public License, Version 3.
 
 #pragma once
 
-#include <string>
-#include <functional>
+#include <libdevcore/Address.h>
 #include <libdevcore/Common.h>
+#include <libdevcore/Exceptions.h>
 #include <libdevcore/FixedHash.h>
-#include <libdevcrypto/Common.h>
+
+#include <functional>
+#include <string>
 
 namespace dev
 {
+
+class RLP;
+class RLPStream;
+
 namespace eth
 {
 
@@ -42,6 +29,11 @@ extern const unsigned c_minorProtocolVersion;
 
 /// Current database version.
 extern const unsigned c_databaseVersion;
+
+/// Address of the special contract for block hash storage defined in EIP96
+extern const Address c_blockhashContractAddress;
+/// Code of the special contract for block hash storage defined in EIP96
+extern const bytes c_blockhashContractCode;
 
 /// User-friendly string representation of the amount _b in wei.
 std::string formatBalance(bigint const& _b);
@@ -85,6 +77,13 @@ enum class RelativeBlock: BlockNumber
 	Pending = PendingBlock
 };
 
+enum class BlockPolarity
+{
+	Unknown,
+	Dead,
+	Live
+};
+
 class Transaction;
 
 struct ImportRoute
@@ -104,7 +103,8 @@ enum class ImportResult
 	AlreadyKnown,
 	Malformed,
 	OverbidGasPrice,
-	BadChain
+	BadChain,
+	ZeroSignature
 };
 
 struct ImportRequirements
@@ -217,5 +217,34 @@ enum class IfDropped
 	Retry 	///< Import transaction even if it was dropped before.
 };
 
+/// Errors returned from main
+enum AlethErrors
+{
+    Success = 0,
+    UnrecognizedPeerset,
+    ArgumentProcessingFailure,
+    UnknownArgument,
+    UnknownMiningOption,
+    ConfigFileEmptyOrNotFound,
+    UnknownNetworkType,
+    BadNetworkIdOption,
+    BadConfigOption,
+    BadExtraDataOption,
+    BadAskOption,
+    BadBidOption,
+    BadFormatOption,
+    BadUpnpOption,
+    BadPrivateOption,
+    BadAddressOption,
+    BadHexValueInAddressOption,
+    BadBlockNumberHashOption,
+    KeyManagerInitializationFailure,
+    SnapshotImportFailure,
+    NetworkStartFailure,
+    BadRlp,
+    RlpDataNotAList,
+    UnsupportedJsonType,
+    InvalidJson
+};
 }
 }

@@ -37,20 +37,42 @@ namespace dev
 namespace p2p
 {
 
-static const unsigned short c_defaultListenPort = 30303;
+constexpr const char* c_localhostIp = "127.0.0.1";
+constexpr unsigned short c_defaultListenPort = 30303;
 
-struct NetworkPreferences
+struct NetworkConfig
 {
-	// Default Network Preferences
-	NetworkPreferences(unsigned short lp = c_defaultListenPort): listenPort(lp) {}
+    // Default Network Preferences
+    explicit NetworkConfig(unsigned short _listenPort = c_defaultListenPort)
+      : listenPort(_listenPort)
+    {}
 
-	// Network Preferences with specific Listen IP
-	NetworkPreferences(std::string const& l, unsigned short lp = c_defaultListenPort, bool u = true): publicIPAddress(), listenIPAddress(l), listenPort(lp), traverseNAT(u) {}
+    // Network Preferences with specific Listen IP
+    NetworkConfig(std::string const& _listenAddress,
+        unsigned short _listenPort = c_defaultListenPort, bool _upnp = true,
+        bool _allowLocalDiscovery = false)
+      : publicIPAddress(),
+        listenIPAddress(_listenAddress),
+        listenPort(_listenPort),
+        traverseNAT(_upnp),
+        allowLocalDiscovery(_allowLocalDiscovery)
+    {}
 
-	// Network Preferences with intended Public IP
-	NetworkPreferences(std::string const& publicIP, std::string const& l = std::string(), unsigned short lp = c_defaultListenPort, bool u = true): publicIPAddress(publicIP), listenIPAddress(l), listenPort(lp), traverseNAT(u) { if (!publicIPAddress.empty() && !isPublicAddress(publicIPAddress)) BOOST_THROW_EXCEPTION(InvalidPublicIPAddress()); }
+    // Network Preferences with intended Public IP
+    NetworkConfig(std::string const& _publicIP, std::string const& _listenAddress = std::string(),
+        unsigned short _listenPort = c_defaultListenPort, bool _upnp = true,
+        bool _allowLocalDiscovery = false)
+      : publicIPAddress(_publicIP),
+        listenIPAddress(_listenAddress),
+        listenPort(_listenPort),
+        traverseNAT(_upnp),
+        allowLocalDiscovery(_allowLocalDiscovery)
+    {
+        if (!publicIPAddress.empty() && !isPublicAddress(publicIPAddress))
+            BOOST_THROW_EXCEPTION(InvalidPublicIPAddress());
+    }
 
-	/// Addressing
+    /// Addressing
 
 	std::string publicIPAddress;
 	std::string listenIPAddress;
@@ -61,6 +83,7 @@ struct NetworkPreferences
 
 	bool traverseNAT = true;
 	bool discovery = true;		// Discovery is activated with network.
+	bool allowLocalDiscovery = false; // Include nodes with local IP addresses in the discovery process.
 	bool pin = false;			// Only accept or connect to trusted peers.
 };
 
@@ -75,7 +98,7 @@ public:
 	static std::set<bi::address> getInterfaceAddresses();
 
 	/// Try to bind and listen on _listenPort, else attempt net-allocated port.
-	static int tcp4Listen(bi::tcp::acceptor& _acceptor, NetworkPreferences const& _netPrefs);
+	static int tcp4Listen(bi::tcp::acceptor& _acceptor, NetworkConfig const& _config);
 
 	/// Return public endpoint of upnp interface. If successful o_upnpifaddr will be a private interface address and endpoint will contain public address and port.
 	static bi::tcp::endpoint traverseNAT(std::set<bi::address> const& _ifAddresses, unsigned short _listenPort, bi::address& o_upnpInterfaceAddr);

@@ -57,6 +57,8 @@ TransactionException dev::eth::toTransactionException(Exception const& _e)
 		return TransactionException::NotEnoughCash;
 	if (!!dynamic_cast<BlockGasLimitReached const*>(&_e))
 		return TransactionException::BlockGasLimitReached;
+	if (!!dynamic_cast<AddressAlreadyUsed const*>(&_e))
+		return TransactionException::AddressAlreadyUsed;
 	// VM execution exceptions
 	if (!!dynamic_cast<BadInstruction const*>(&_e))
 		return TransactionException::BadInstruction;
@@ -93,6 +95,7 @@ std::ostream& dev::eth::operator<<(std::ostream& _out, TransactionException cons
 		case TransactionException::StackUnderflow: _out << "StackUnderflow"; break;
 		case TransactionException::CreateWithValue: _out << "CreateWithValue"; break;
 		case TransactionException::NoInformation: _out << "NoInformation"; break;
+		case TransactionException::RevertInstruction: _out << "Revert"; break;
 		default: _out << "Unknown"; break;
 	}
 	return _out;
