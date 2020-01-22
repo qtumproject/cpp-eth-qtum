@@ -20,7 +20,7 @@ static dev::h256 const c_genesisStateRootQtumTestNetwork("2ebd2f054ed409f4bc7792
 static std::string const c_genesisInfoQtumTestNetwork = std::string() +
 R"E(
 {
-	"sealEngine": "Ethash",
+	"sealEngine": "NoProof",
 	"params": {
 		"accountStartNonce": "0x00",
 		"homesteadForkBlock": "0x00",
