@@ -136,3 +136,4 @@ utils/libscrypt/.deps/crypto_libbitcoin_crypto_base_a-crypto_scrypt-hexconvert.P
 utils/libscrypt/.deps/crypto_libbitcoin_crypto_base_a-crypto_scrypt-nosse.Po
 utils/libscrypt/.deps/crypto_libbitcoin_crypto_base_a-sha256.Po
 utils/libscrypt/.deps/crypto_libbitcoin_crypto_base_a-slowequals.Po
+libbitcoinconsensus_la-CommonData.Plo
