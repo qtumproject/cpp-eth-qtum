@@ -392,7 +392,11 @@ bool ecdh::agree(Secret const& _s, Public const& _r, Secret& o_s) noexcept
     // FIXME: We should verify the public key when constructed, maybe even keep
     //        secp256k1_pubkey as the internal data of Public.
     std::array<byte, 33> compressedPoint;
+#ifdef QTUM_BUILD
+    if (!secp256k1_ecdh(ctx, compressedPoint.data(), &rawPubkey, _s.data(), nullptr, nullptr))
+#else
     if (!secp256k1_ecdh_raw(ctx, compressedPoint.data(), &rawPubkey, _s.data()))
+#endif
         return false;  // Invalid secret key.
     std::copy(compressedPoint.begin() + 1, compressedPoint.end(), o_s.writable().data());
     return true;

@@ -163,7 +163,15 @@ SealEngineFace* SealEngineRegistrar::create(ChainOperationParams const& _params)
 
 EVMSchedule const& SealEngineBase::evmSchedule(u256 const& _blockNumber) const
 {
-    return chainParams().scheduleForBlockNumber(_blockNumber);
+	//////////////////////////////////////////////////////// // qtum
+	if (u256(0) == chainParams().EIP158ForkBlock && 
+		u256(0) == chainParams().EIP150ForkBlock &&
+		u256(0) == chainParams().homesteadForkBlock &&
+		 false  == chainParams().allowFutureBlocks){
+			return getQtumSchedule();
+	}
+	////////////////////////////////////////////////////////
+	return chainParams().scheduleForBlockNumber(_blockNumber);
 }
 
 u256 SealEngineBase::blockReward(u256 const& _blockNumber) const

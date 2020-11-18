@@ -12,6 +12,9 @@
 #include <libdevcrypto/Hash.h>
 #include <libdevcrypto/LibSnark.h>
 #include <libethcore/Common.h>
+#ifdef QTUM_BUILD
+#include <qtum/qtumutils.h>
+#endif
 using namespace std;
 using namespace dev;
 using namespace dev::eth;
@@ -46,6 +49,36 @@ ETH_REGISTER_PRECOMPILED_PRICER(ecrecover)
 (bytesConstRef /*_in*/, ChainOperationParams const& /*_chainParams*/, u256 const& /*_blockNumber*/)
 {
     return 3000;
+}
+
+ETH_REGISTER_PRECOMPILED(btc_ecrecover)(bytesConstRef _in)
+{
+    struct
+    {
+        h256 hash;
+        h256 v;
+        h256 r;
+        h256 s;
+    } in;
+
+    memcpy(&in, _in.data(), min(_in.size(), sizeof(in)));
+
+    h256 ret;
+    try
+    {
+        bool recovered = false;
+#ifdef QTUM_BUILD
+        u256 v = (u256)in.v;
+        recovered = qtumutils::btc_ecrecover(in.hash, v, in.r, in.s, ret);
+#endif
+        if(recovered)
+        {
+            return {true, ret.asBytes()};
+        }
+    }
+    catch (...) {}
+
+    return {true, {}};
 }
 
 ETH_REGISTER_PRECOMPILED(ecrecover)(bytesConstRef _in)

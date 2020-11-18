@@ -15,7 +15,9 @@ enum class VMKind
 {
     Interpreter,
     Legacy,
+#ifndef QTUM_BUILD
     DLL
+#endif
 };
 
 /// Provide a set of program options related to VMs.
