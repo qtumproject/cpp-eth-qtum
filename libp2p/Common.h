@@ -66,6 +66,7 @@ struct NetworkRestartNotSupported : virtual dev::Exception {};
 /// The ECDHE agreement failed during RLPx handshake.
 struct ECDHEError: virtual Exception {};
 
+#ifndef QTUM_BUILD
 #define NET_GLOBAL_LOGGER(NAME, SEVERITY)                      \
     BOOST_LOG_INLINE_GLOBAL_LOGGER_CTOR_ARGS(g_##NAME##Logger, \
         boost::log::sources::severity_channel_logger_mt<>,     \
@@ -77,6 +78,14 @@ NET_GLOBAL_LOGGER(netlog, VerbosityDebug)
 #define cnetlog LOG(dev::p2p::g_netlogLogger::get())
 NET_GLOBAL_LOGGER(netdetails, VerbosityTrace)
 #define cnetdetails LOG(dev::p2p::g_netdetailsLogger::get())
+#else
+extern Logger g_netnoteLogger;
+extern Logger g_netlogLogger;
+extern Logger g_netdetailsLogger;
+#define cnetnote LOG(dev::p2p::g_netnoteLogger)
+#define cnetlog LOG(dev::p2p::g_netlogLogger)
+#define cnetdetails LOG(dev::p2p::g_netdetailsLogger)
+#endif
 
 enum P2pPacketType
 {
@@ -257,11 +266,13 @@ public:
     std::atomic<PeerType> peerType{PeerType::Optional};
 };
 
+#ifndef QTUM_BUILD
 inline boost::log::formatting_ostream& operator<<(
     boost::log::formatting_ostream& _strm, Node const& _node)
 {
     return _strm << _node.id << '@' << _node.endpoint;
 }
+#endif
 
 inline boost::log::formatting_ostream& operator<<(
     boost::log::formatting_ostream& _strm, Node& _node)
@@ -287,8 +298,11 @@ inline boost::log::formatting_ostream& operator<<(
     return _strm;
 }
 
+#ifndef QTUM_BUILD
 /// Simple stream output for a NodeIPEndpoint.
 std::ostream& operator<<(std::ostream& _out, NodeIPEndpoint const& _ep);
+#endif
+
 
 /// Official Ethereum boot nodes
 std::vector<std::pair<Public, const char*>> defaultBootNodes();

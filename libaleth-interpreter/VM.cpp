@@ -314,8 +314,8 @@ void VM::interpretCases()
             updateMem(memNeed(m_SP[0], m_SP[1]));
             updateIOGas();
 
-            uint64_t b = (uint64_t)m_SP[0];
-            uint64_t s = (uint64_t)m_SP[1];
+            size_t b = (size_t)m_SP[0];
+            size_t s = (size_t)m_SP[1];
             m_output = owning_bytes_ref{std::move(m_mem), b, s};
             m_bounce = 0;
         }

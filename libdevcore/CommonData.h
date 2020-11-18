@@ -264,6 +264,8 @@ template <class T, class U> std::vector<T> operator+(std::vector<T> _a, U const&
 	return _a += _b;
 }
 
+/// Make normal string from fixed-length string.
+std::string toString(string32 const& _s);
 
 template<class T, class U>
 std::vector<T> keysOf(std::map<T, U> const& _m)
