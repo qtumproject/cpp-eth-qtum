@@ -221,6 +221,11 @@ bool Executive::call(CallParameters const& _p, u256 const& _gasPrice, Address co
         }
     }
 
+    //////////////////////////////////////////////// // qtum
+    if(!m_s.addressInUse(_p.receiveAddress))
+        m_sealEngine.deleteAddresses.insert(_p.receiveAddress);
+    ////////////////////////////////////////////////
+
     // Transfer ether.
     m_s.transferBalance(_p.senderAddress, _p.receiveAddress, _p.valueTransfer);
     return !m_ext;

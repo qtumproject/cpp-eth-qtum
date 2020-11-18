@@ -22,6 +22,9 @@ bool changesStorage(Instruction _inst)
 void StandardTrace::operator()(uint64_t _steps, uint64_t PC, Instruction inst, bigint newMemSize,
     bigint gasCost, bigint gas, VMFace const* _vm, ExtVMFace const* voidExt)
 {
+#ifdef QTUM_BUILD
+    return;
+#else
     (void)_steps;
 
     ExtVM const& ext = dynamic_cast<ExtVM const&>(*voidExt);
@@ -107,6 +110,7 @@ void StandardTrace::operator()(uint64_t _steps, uint64_t PC, Instruction inst, b
         m_outValue->append(r);
     else
         *m_outStream << m_fastWriter.write(r) << std::flush;
+#endif
 }
 }  // namespace eth
 }  // namespace dev

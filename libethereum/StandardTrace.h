@@ -4,7 +4,9 @@
 
 #pragma once
 
+#ifndef QTUM_BUILD
 #include <json/json.h>
+#endif
 #include <libdevcore/Common.h>
 #include <libevm/Instruction.h>
 #include <libevm/VMFace.h>
@@ -32,8 +34,10 @@ public:
 
     // Output json trace to stream, one line per op
     explicit StandardTrace(std::ostream& _outStream) noexcept : m_outStream{&_outStream} {}
+#ifndef QTUM_BUILD
     // Append json trace to given (array) value
     explicit StandardTrace(Json::Value& _outValue) noexcept : m_outValue{&_outValue} {}
+#endif
 
     void operator()(uint64_t _steps, uint64_t _PC, Instruction _inst, bigint _newMemSize,
         bigint _gasCost, bigint _gas, VMFace const* _vm, ExtVMFace const* _extVM);
@@ -53,8 +57,10 @@ private:
     bool m_showMnemonics = false;
     std::vector<Instruction> m_lastInst;
     std::ostream* m_outStream = nullptr;
+#ifndef QTUM_BUILD
     Json::Value* m_outValue = nullptr;
     Json::FastWriter m_fastWriter;
+#endif
     DebugOptions m_options;
 };
 }  // namespace eth
