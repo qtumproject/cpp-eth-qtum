@@ -78,15 +78,6 @@ and used if it meets the minimum version requirement.
 > a fixed version of CMake and unpacks it to the given directory prefix.
 > Example usage: `scripts/install_cmake.sh --prefix /usr/local`.
 
-#### Install dependencies (Windows)
-
-We provide prebuilt dependencies to build the project. Download them
-with the [scripts\install_deps.bat](scripts/install_deps.bat) script.
-
-```shell
-scripts\install_deps.bat
-```
-
 #### Build
 
 Configure the project build with the following command to create the
@@ -98,15 +89,14 @@ cmake ..               # Configure the project.
 cmake --build .        # Build all default targets.
 ```
 
-On **Windows** Visual Studio 2015 is required. You should generate Visual Studio
-solution file (.sln) for 64-bit architecture by adding
-`-G "Visual Studio 14 2015 Win64"` argument to the CMake configure command.
-After configuration is completed, the `aleth.sln` can be found in the
+On **Windows** we support Visual Studio 2017, and 2019. You should generate a Visual Studio solution file (`.sln`) for the 64-bit architecture via the following command:
+
+* **Visual Studio 2017**: `cmake .. -G "Visual Studio 15 2017 Win64"`
+* **Visual Studio 2019**: `cmake .. -G "Visual Studio 16 2019" -A x64`
+
+After the necessary dependencies have been downloaded and built and the solution has been generated, `aleth.sln` can be found in the
 `build` directory.
 
-```shell
-cmake .. -G "Visual Studio 14 2015 Win64"
-```
 #### Common Issues Building on Windows
 ##### LINK : fatal error LNK1158: cannot run 'rc.exe'
 Rc.exe is the [Microsoft Resource Compiler](https://docs.microsoft.com/en-us/windows/desktop/menurc/resource-compiler). It's distributed with the [Windows SDK](https://developer.microsoft.com/en-US/windows/downloads/windows-10-sdk) and is required for generating the Visual Studio solution file. It can be found in the following directory: ```%ProgramFiles(x86)%\Windows Kits\<OS major version>\bin\<OS full version>\<arch>\```
@@ -128,7 +118,7 @@ Our day-to-day development chat happens on the
 All contributions are welcome! We try to keep a list of tasks that are suitable
 for newcomers under the tag
 [help wanted](https://github.com/ethereum/aleth/labels/help%20wanted).
-If you have any questions, please do not hestitate to ask us about more information.
+If you have any questions, please do not hesitate to ask us about more information.
 
 Please read [CONTRIBUTING](CONTRIBUTING.md) and [CODING_STYLE](CODING_STYLE.md)
 thoroughly before making alterations to the code base.
@@ -140,7 +130,7 @@ All development goes in develop branch.
 
 ```
 NAME:
-   aleth 1.5.2
+   aleth 1.7.2
 USAGE:
    aleth [options]
 
@@ -154,7 +144,6 @@ WALLET USAGE:
 CLIENT MODE (default):
   --mainnet                               Use the main network protocol
   --ropsten                               Use the Ropsten testnet
-  --private <name>                        Use a private chain
   --test                                  Testing mode; disable PoW and provide test rpc interface
   --config <file>                         Configure specialised blockchain using given JSON information
 
@@ -231,7 +220,7 @@ IMPORT/EXPORT MODES:
   --import-snapshot <path>    Import blockchain and state data from the Parity Warp Sync snapshot
 
 DATABASE OPTIONS:
-  --db <name> (=leveldb)                   Select database implementation. Available options are: leveldb, rocksdb, memorydb.
+  --db <name> (=leveldb)      Select database implementation. Available options are: leveldb, memorydb.
   --db-path <path> (=$HOME/.ethereum) Database path (for non-memory database options)
 
 VM OPTIONS:
@@ -241,13 +230,25 @@ VM OPTIONS:
 LOGGING OPTIONS:
   -v [ --log-verbosity ] <0 - 4>        Set the log verbosity from 0 to 4 (default: 2).
   --log-channels <channel_list>         Space-separated list of the log channels to show (default: show all channels).
+                                        Channels: block blockhdr bq chain client debug discov error ethcap exec host impolite info net overlaydb p2pcap peer
+                                        rlpx rpc snap statedb sync timer tq trace vmtrace warn warpcap watch
   --log-exclude-channels <channel_list> Space-separated list of the log channels to hide.
 
+  --log-vmtrace                         Enable VM trace log (requires log-verbosity 4).
+
 GENERAL OPTIONS:
-  -d [ --data-dir ] <path> Load configuration files and keystore from path (default: /home/mwo2/.ethereum)
+  -d [ --data-dir ] <path> Load configuration files and keystore from path (default: $HOME/.ethereum)
   -V [ --version ]         Show the version and exit
   -h [ --help ]            Show this help message and exit
 ```
+
+## Tools
+The Aleth project includes the following tools in addition to the Aleth client:
+* **[aleth-bootnode](aleth-bootnode/)**: A C++ Ethereum discovery bootnode implementation
+* **[aleth-key](aleth-key/)**: A rudimentary wallet
+* **[aleth-vm](aleth-vm/)**: An EVM bytecode runner tool
+* **[rlp](rlp/)**: A RLP encoder/decoder tool
+* **[testeth](test/)**: A consensus test generator/runner tool
 
 ## Mining
 
@@ -256,7 +257,6 @@ has been dropped some time ago including the ethminer tool. Use the ethminer too
 
 ## Testing
 Details on how to run and debug the tests can be found [here](doc/usingtesteth.rst)
-
 
 ## Documentation
 

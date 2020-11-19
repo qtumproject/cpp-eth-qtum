@@ -29,6 +29,8 @@ R"E(
 		"EIP158ForkBlock": "0xffffffffffffffffff",
 		"byzantiumForkBlock": "0xffffffffffffffffff",
 		"constantinopleForkBlock": "0xffffffffffffffffff",
+		"istanbulForkBlock": "0xffffffffffffffffff",
+		"muirGlacierForkBlock": "0xffffffffffffffffff",
 		"networkID" : "0x01",
 		"chainID": "0x01",
 		"maximumExtraDataSize": "0x20",

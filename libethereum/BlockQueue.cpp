@@ -1,23 +1,6 @@
-/*
-    This file is part of cpp-ethereum.
-
-    cpp-ethereum is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    cpp-ethereum is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with cpp-ethereum.  If not, see <http://www.gnu.org/licenses/>.
-*/
-/** @file BlockQueue.cpp
- * @author Gav Wood <i@gavwood.com>
- * @date 2014
- */
+// Aleth: Ethereum C++ client, tools and libraries.
+// Copyright 2014-2019 Aleth Authors.
+// Licensed under the GNU General Public License, Version 3.
 
 #include "BlockQueue.h"
 #include <thread>
@@ -32,10 +15,10 @@ using namespace std;
 using namespace dev;
 using namespace dev::eth;
 
-size_t const c_maxKnownCount = 100000;
-size_t const c_maxKnownSize = 128 * 1024 * 1024;
-size_t const c_maxUnknownCount = 100000;
-size_t const c_maxUnknownSize = 512 * 1024 * 1024; // Block size can be ~50kb
+constexpr size_t c_maxKnownCount = 100000;
+constexpr size_t c_maxKnownSize = 128 * 1024 * 1024;
+constexpr size_t c_maxUnknownCount = 100000;
+constexpr size_t c_maxUnknownSize = 512 * 1024 * 1024;  // Block size can be ~50kb
 
 BlockQueue::BlockQueue()
 {
@@ -433,11 +416,9 @@ std::size_t BlockQueue::unknownCount() const
 
 void BlockQueue::drain(VerifiedBlocks& o_out, unsigned _max)
 {
-    bool wasFull = false;
     DEV_WRITE_GUARDED(m_lock)
     {
         DEV_INVARIANT_CHECK;
-        wasFull = knownFull();
         if (m_drainingSet.empty())
         {
             m_drainingDifficulty = 0;
@@ -454,8 +435,7 @@ void BlockQueue::drain(VerifiedBlocks& o_out, unsigned _max)
             }
         }
     }
-    if (wasFull && !knownFull())
-        m_onRoomAvailable();
+    m_onBlocksDrained();
 }
 
 bool BlockQueue::invariants() const
@@ -514,7 +494,8 @@ void BlockQueue::retryAllUnknown()
     m_moreToVerify.notify_all();
 }
 
-std::ostream& dev::eth::operator<<(std::ostream& _out, BlockQueueStatus const& _bqs)
+boost::log::formatting_ostream& dev::eth::operator<<(
+    boost::log::formatting_ostream& _out, BlockQueueStatus const& _bqs)
 {
     _out << "importing: " << _bqs.importing << endl;
     _out << "verified: " << _bqs.verified << endl;

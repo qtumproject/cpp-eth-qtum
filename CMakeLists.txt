@@ -1,5 +1,5 @@
 # Aleth: Ethereum C++ client, tools and libraries.
-# Copyright 2018 Aleth Autors.
+# Copyright 2013-2019 Aleth Authors.
 # Licensed under the GNU General Public License, Version 3. See the LICENSE file.
 
 cmake_minimum_required(VERSION 3.9.3)
@@ -14,7 +14,7 @@ include(CableBuildType)
 include(CableToolchains)
 include(GNUInstallDirs)
 
-cable_configure_toolchain(DEFAULT cxx11-pic)
+cable_configure_toolchain(DEFAULT cxx14-pic)
 
 set(ETH_CMAKE_DIR "${CMAKE_CURRENT_LIST_DIR}/cmake" CACHE PATH "The path to the cmake directory")
 list(APPEND CMAKE_MODULE_PATH ${ETH_CMAKE_DIR})
@@ -39,15 +39,15 @@ option(HUNTER_RUN_UPLOAD "Upload binaries to the cache server" ${run_upload})
 
 include(HunterGate)
 HunterGate(
-    URL "https://github.com/ruslo/hunter/archive/v0.23.44.tar.gz"
-    SHA1 "c4cfcc0cd39fdae8de08f6205b7f34cab4a7ba79"
+    URL "https://github.com/ruslo/hunter/archive/v0.23.211.tar.gz"
+    SHA1 "c022f0c2480e835a6bafdd734035ec2071b51897"
     LOCAL
 )
 
-project(aleth)
-set(PROJECT_VERSION 1.6.0-alpha.1)
-
 cable_set_build_type(DEFAULT RelWithDebInfo CONFIGURATION_TYPES Debug;Release;RelWithDebInfo)
+
+project(aleth)
+set(PROJECT_VERSION 1.8.0)
 
 cable_add_buildinfo_library(PROJECT_NAME aleth)
 
@@ -82,6 +82,8 @@ find_package(libscrypt CONFIG REQUIRED)
 
 hunter_add_package(ethash)
 find_package(ethash CONFIG REQUIRED)
+
+message("Crypto++: ${HUNTER_cryptopp_VERSION}")
 
 include(ProjectSecp256k1)
 include(ProjectLibFF)
