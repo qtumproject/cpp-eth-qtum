@@ -272,7 +272,6 @@ inline boost::log::formatting_ostream& operator<<(
 {
     return _strm << _node.id << '@' << _node.endpoint;
 }
-#endif
 
 inline boost::log::formatting_ostream& operator<<(
     boost::log::formatting_ostream& _strm, Node& _node)
@@ -281,6 +280,7 @@ inline boost::log::formatting_ostream& operator<<(
     _strm << constValue;
     return _strm;
 }
+#endif
 
 inline std::ostream& operator<<(std::ostream& _strm, NodeID const& _id)
 {
@@ -288,6 +288,7 @@ inline std::ostream& operator<<(std::ostream& _strm, NodeID const& _id)
     return _strm;
 }
 
+#ifndef QTUM_BUILD
 inline boost::log::formatting_ostream& operator<<(
     boost::log::formatting_ostream& _strm, PeerSessionInfo const& _peerSessionInfo)
 {
@@ -298,7 +299,6 @@ inline boost::log::formatting_ostream& operator<<(
     return _strm;
 }
 
-#ifndef QTUM_BUILD
 /// Simple stream output for a NodeIPEndpoint.
 std::ostream& operator<<(std::ostream& _out, NodeIPEndpoint const& _ep);
 #endif
