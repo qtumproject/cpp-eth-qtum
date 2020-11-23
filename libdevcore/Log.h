@@ -551,6 +551,9 @@ extern int g_logVerbosity;
 /// The current method that the logging system uses to output the log messages. Defaults to simpleDebugOut().
 extern std::function<void(std::string const&, char const*)> g_logPost;
 
+/// Is vm trace enabled
+bool isVmTraceEnabled();
+
 /// Logging class, iostream-like, that can be shifted to.
 class LogOutputStream: LogOutputStreamBase
 {

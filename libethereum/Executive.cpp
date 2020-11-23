@@ -4,7 +4,9 @@
 
 #include "Executive.h"
 #include "Block.h"
+#ifndef QTUM_BUILD
 #include "BlockChain.h"
+#endif
 #include "ExtVM.h"
 #include "Interface.h"
 #include "StandardTrace.h"
@@ -44,6 +46,7 @@ std::string dumpStorage(ExtVM const& _ext)
 };
 }  // namespace
 
+#ifndef QTUM_BUILD
 Executive::Executive(Block& _s, BlockChain const& _bc, unsigned _level)
   : m_s(_s.mutableState()),
     m_envInfo(_s.info(), _bc.lastBlockHashes(), 0, _bc.chainID()),
@@ -69,6 +72,7 @@ Executive::Executive(
     m_sealEngine(*_bc.sealEngine())
 {
 }
+#endif
 
 u256 Executive::gasUsed() const
 {

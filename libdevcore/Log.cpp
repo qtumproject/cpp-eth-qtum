@@ -186,6 +186,11 @@ void simpleDebugOut(std::string const& _s, char const*)
 
 std::function<void(std::string const&, char const*)> g_logPost = simpleDebugOut;
 
+bool isVmTraceEnabled()
+{
+    return VerbosityTrace < g_logVerbosity;
+}
+
 }  // namespace
 
 #endif

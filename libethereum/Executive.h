@@ -51,6 +51,7 @@ public:
     /// Simple constructor; executive will operate on given state, with the given environment info.
     Executive(State& _s, EnvInfo const& _envInfo, SealEngineFace const& _sealEngine, unsigned _level = 0): m_s(_s), m_envInfo(_envInfo), m_depth(_level), m_sealEngine(_sealEngine) {}
 
+#ifndef QTUM_BUILD
     /** Easiest constructor.
      * Creates executive to operate on the state of end of the given block, populating environment
      * info from given Block and the LastHashes portion from the BlockChain.
@@ -69,6 +70,7 @@ public:
      * State is assigned the resultant value, but otherwise unused.
      */
     Executive(State& io_s, Block const& _block, unsigned _txIndex, BlockChain const& _bc, unsigned _level = 0);
+#endif
 
     Executive(Executive const&) = delete;
     void operator=(Executive) = delete;
