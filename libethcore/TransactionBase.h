@@ -32,6 +32,8 @@ enum class CheckTransaction
     Everything
 };
 
+#define o_has_value(o) (o.get_ptr() != 0)
+
 /// Encodes a transaction, ready to be exported to or freshly imported from RLP.
 class TransactionBase
 {
@@ -125,13 +127,13 @@ public:
     void setNonce(u256 const& _n) { clearSignature(); m_nonce = _n; }
 
     /// @returns true if the transaction was signed
-    bool hasSignature() const { return m_vrs.has_value(); }
+    bool hasSignature() const { return o_has_value(m_vrs); }
 
     /// @returns true if the transaction was signed with zero signature
     bool hasZeroSignature() const { return m_vrs && isZeroSignature(m_vrs->r, m_vrs->s); }
 
     /// @returns true if the transaction uses EIP155 replay protection
-    bool isReplayProtected() const { return m_chainId.has_value(); }
+    bool isReplayProtected() const { return o_has_value(m_chainId); }
 
     /// @returns the signature of the transaction (the signature has the sender encoded in it)
     /// @throws TransactionIsUnsigned if signature was not initialized

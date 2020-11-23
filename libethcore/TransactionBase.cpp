@@ -74,7 +74,7 @@ TransactionBase::TransactionBase(bytesConstRef _rlpData, CheckTransaction _check
                 BOOST_THROW_EXCEPTION(InvalidSignature());
 
             auto const recoveryID =
-                m_chainId.has_value() ? byte{v - (u256{*m_chainId} * 2 + 35)} : byte{v - 27};
+                o_has_value(m_chainId) ? byte{v - (u256{*m_chainId} * 2 + 35)} : byte{v - 27};
             m_vrs = SignatureStruct{r, s, recoveryID};
 
             if (_checkSig >= CheckTransaction::Cheap && !m_vrs->isValid())
@@ -139,7 +139,7 @@ u256 TransactionBase::rawV() const
     if (!m_vrs)
         BOOST_THROW_EXCEPTION(TransactionIsUnsigned());
 
-    int const vOffset = m_chainId.has_value() ? *m_chainId * 2 + 35 : 27;
+    int const vOffset = o_has_value(m_chainId) ? *m_chainId * 2 + 35 : 27;
     return m_vrs->v + vOffset;
 }
 
@@ -194,7 +194,7 @@ void TransactionBase::checkLowS() const
 
 void TransactionBase::checkChainId(uint64_t _chainId) const
 {
-    if (m_chainId.has_value() && *m_chainId != _chainId)
+    if (o_has_value(m_chainId) && *m_chainId != _chainId)
         BOOST_THROW_EXCEPTION(InvalidSignature());
 }
 
