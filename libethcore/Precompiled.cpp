@@ -51,6 +51,12 @@ ETH_REGISTER_PRECOMPILED_PRICER(ecrecover)
     return 3000;
 }
 
+ETH_REGISTER_PRECOMPILED_PRICER(btc_ecrecover)
+(bytesConstRef /*_in*/, ChainOperationParams const& /*_chainParams*/, u256 const& /*_blockNumber*/)
+{
+    return 3000;
+}
+
 ETH_REGISTER_PRECOMPILED(btc_ecrecover)(bytesConstRef _in)
 {
     struct
