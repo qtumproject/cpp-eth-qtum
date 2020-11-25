@@ -16,11 +16,19 @@ DatabasePaths::DatabasePaths(fs::path const& _rootPath, h256 const& _genesisHash
 {
     // Allow an empty root path and empty genesis hash since they are required by the tests
     m_rootPath = _rootPath;
+#ifdef QTUM_BUILD
+    m_chainPath = m_rootPath / fs::path(toHex(_genesisHash.ref().cropped(0, 4))) / fs::path(toString(c_databaseVersion));
+#else
     m_chainPath = m_rootPath / fs::path(toHex(_genesisHash.ref().cropped(0, 4)));
+#endif
     m_statePath = m_chainPath / fs::path("state");
     m_blocksPath = m_chainPath / fs::path("blocks");
 
+#ifdef QTUM_BUILD
+    auto const extrasRootPath = m_chainPath;
+#else
     auto const extrasRootPath = m_chainPath / fs::path(toString(c_databaseVersion));
+#endif
     m_extrasPath = extrasRootPath / fs::path("extras");
     m_extrasTemporaryPath = extrasRootPath / fs::path("extras.old");
     m_extrasMinorVersionPath = m_extrasPath / fs::path("minor");
