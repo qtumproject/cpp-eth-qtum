@@ -1617,6 +1617,22 @@ VerifiedBlockRef BlockChain::verifyBlock(bytesConstRef _block, std::function<voi
     return res;
 }
 
+template <class T>
+inline
+boost::exception_ptr
+boost_copy_exception( T const & e )
+{
+    try
+    {
+        throw boost::enable_current_exception(e);
+    }
+    catch(
+    ... )
+    {
+        return boost::current_exception();
+    }
+}
+
 void BlockChain::setChainStartBlockNumber(unsigned _number)
 {
     h256 const hash = numberHash(_number);
@@ -1632,7 +1648,7 @@ void BlockChain::setChainStartBlockNumber(unsigned _number)
     {
         BOOST_THROW_EXCEPTION(FailedToWriteChainStart()
                               << errinfo_hash256(hash)
-                              << boost::errinfo_nested_exception(boost::copy_exception(ex)));
+                              << boost::errinfo_nested_exception(boost_copy_exception(ex)));
     }
 }
 
