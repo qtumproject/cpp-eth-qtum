@@ -1,3 +1,6 @@
+# Aleth: Ethereum C++ client, tools and libraries.
+# Copyright 2017-2019 Aleth Authors.
+# Licensed under the GNU General Public License, Version 3.
 include(ProjectMPIR)
 
 set(prefix "${CMAKE_BINARY_DIR}/deps")
@@ -19,6 +22,7 @@ ExternalProject_Add(libff
         -DUSE_PT_COMPRESSION=Off
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+        -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
     BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --config Release
     LOG_BUILD 1
     INSTALL_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --config Release --target install

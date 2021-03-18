@@ -1,19 +1,6 @@
-/*
-    This file is part of cpp-ethereum.
-
-    cpp-ethereum is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    cpp-ethereum is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with cpp-ethereum.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Aleth: Ethereum C++ client, tools and libraries.
+// Copyright 2014-2019 Aleth Authors.
+// Licensed under the GNU General Public License, Version 3.
 
 #pragma once
 
@@ -116,10 +103,13 @@ struct LoggingOptions
     int verbosity = VerbosityInfo;
     strings includeChannels;
     strings excludeChannels;
+    bool vmTrace = false;
 };
 
 // Should be called in every executable
 void setupLogging(LoggingOptions const& _options);
+
+bool isVmTraceEnabled();
 
 // Simple non-thread-safe logger with fixed severity and channel for each message
 // For better formatting it is recommended to limit channel name to max 6 characters.
@@ -129,11 +119,6 @@ inline Logger createLogger(int _severity, std::string const& _channel)
     return Logger(
         boost::log::keywords::severity = _severity, boost::log::keywords::channel = _channel);
 }
-
-// Adds the context string to all log messages in the scope
-#define LOG_SCOPED_CONTEXT(context) \
-    BOOST_LOG_SCOPED_THREAD_ATTR("Context", boost::log::attributes::constant<std::string>(context));
-
 
 // Below overloads for both const and non-const references are needed, because without overload for
 // non-const reference generic operator<<(formatting_ostream& _strm, T& _value) will be preferred by
@@ -565,6 +550,9 @@ extern int g_logVerbosity;
 
 /// The current method that the logging system uses to output the log messages. Defaults to simpleDebugOut().
 extern std::function<void(std::string const&, char const*)> g_logPost;
+
+/// Is vm trace enabled
+bool isVmTraceEnabled();
 
 /// Logging class, iostream-like, that can be shifted to.
 class LogOutputStream: LogOutputStreamBase

@@ -10,6 +10,7 @@ set(unittest_sources
     unittests/libdevcore/CommonJS.cpp
     unittests/libdevcore/core.cpp
     unittests/libdevcore/FixedHash.cpp
+    unittests/libdevcore/LruCache.cpp
     unittests/libdevcore/RangeMask.cpp
     unittests/libdevcore/RLP.cpp
 
@@ -21,10 +22,13 @@ set(unittest_sources
     unittests/libethcore/CommonJS.cpp
     unittests/libethcore/KeyManager.cpp
 
+    unittests/libethereum/ExecutiveTest.cpp
     unittests/libethereum/ValidationSchemes.cpp
 
     unittests/libp2p/capability.cpp
     unittests/libp2p/eip-8.cpp
+    unittests/libp2p/EndpointTrackerTest.cpp
+    unittests/libp2p/ENRTest.cpp
     unittests/libp2p/rlpx.cpp
 
     unittests/libweb3core/memorydb.cpp
@@ -38,7 +42,7 @@ add_executable(aleth-unittests ${unittest_sources})
 target_include_directories(aleth-unittests PRIVATE ${UTILS_INCLUDE_DIR})
 target_link_libraries(aleth-unittests PRIVATE
     web3jsonrpc ethashseal devcrypto devcore
-    GTest::gtest GTest::main
+    GTest::gtest GTest::gtest_main
 )
 gtest_add_tests(TARGET aleth-unittests TEST_PREFIX unittests/ TEST_LIST unittests)
 set_tests_properties(${unittests} PROPERTIES TIMEOUT ${timeout})
@@ -52,6 +56,7 @@ list(REMOVE_ITEM sources ${unittest_sources})
 # search for test names and create ctest tests
 set(excludeSuites jsonrpc \"customTestSuite\" BlockQueueSuite)
 set(allSuites jsonrpc)
+set(allTests "")
 foreach(file ${sources})
     file(STRINGS ${file} test_list_raw REGEX "BOOST_.*TEST_(SUITE|CASE|SUITE_END)")
     set(TestSuite "DEFAULT")
@@ -59,22 +64,16 @@ foreach(file ${sources})
     foreach(test_raw ${test_list_raw})
         string(REGEX REPLACE ".*TEST_(SUITE|CASE)\\(([^ ,\\)]*).*" "\\1 \\2" test ${test_raw})
 
-        #skip disabled
-        if (";${excludeSuites};" MATCHES ";${TestSuite};")
-            continue()
-        endif()
-
         if(test MATCHES "^SUITE .*")
-
             string(SUBSTRING ${test} 6 -1 TestSuite)
-            set(TestSuitePath "${TestSuitePath}/${TestSuite}")
+            if (";${excludeSuites};" MATCHES ";${TestSuite};")
+                continue()
+            endif()
 
+            set(TestSuitePath "${TestSuitePath}/${TestSuite}")
+            string(SUBSTRING ${TestSuitePath} 1 -1 TestSuitePathFixed)
             if(FASTCTEST)
-                if (";${excludeSuites};" MATCHES ";${TestSuite};")
-                    continue()
-                endif()
                 if (NOT ";${allSuites};" MATCHES ";${TestSuite};")
-                    string(SUBSTRING ${TestSuitePath} 1 -1 TestSuitePathFixed)
                     list(APPEND allSuites ${TestSuite})
                     separate_arguments(TESTETH_ARGS)
                     set(TestEthArgs -t ${TestSuitePathFixed} -- ${TESTETH_ARGS})
@@ -82,7 +81,12 @@ foreach(file ${sources})
                     set_tests_properties(${TestSuitePathFixed} PROPERTIES TIMEOUT ${timeout})
                 endif()
             endif()
+            set(allTests "${allTests}   \"${TestSuitePathFixed}\",\n")
         elseif(test MATCHES "^CASE .*")
+            #skip all test cases for the testSuite that is being skipped
+            if (";${excludeSuites};" MATCHES ";${TestSuite};")
+                continue()
+            endif()
             if(NOT FASTCTEST)
                 if(NOT test MATCHES "^CASE &createRandom.*")
                     string(SUBSTRING ${test} 5 -1 TestCase)
@@ -91,15 +95,23 @@ foreach(file ${sources})
                     set(TestEthArgs -t ${TestSuitePathFixed}/${TestCase} -- ${TESTETH_ARGS})
                     add_test(NAME ${TestSuitePathFixed}/${TestCase} WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/test COMMAND testeth ${TestEthArgs})
                     set_tests_properties(${TestSuitePathFixed}/${TestCase} PROPERTIES TIMEOUT ${timeout})
+                    set(allTests "${allTests}   \"${TestSuitePathFixed}/${TestCase}\",\n")
                 endif()
             endif()
         elseif (";${test_raw};" MATCHES "BOOST_AUTO_TEST_SUITE_END()")
+            #skip all suite end for the testSuite that is being skipped
+            if (";${excludeSuites};" MATCHES ";${TestSuite};")
+                continue()
+            endif()
             #encountered SUITE_END block. remove one test suite from the suite path.
             string(FIND ${TestSuitePath} "/" Position REVERSE)
             string(SUBSTRING ${TestSuitePath} 0 ${Position} TestSuitePath)
         endif()
     endforeach(test_raw)
 endforeach(file)
+
+#Save allTests into a variable in include file
+configure_file(tools/libtesteth/AllTestNames.h.in ${PROJECT_BINARY_DIR}/AllTestNames.h)
 
 hunter_add_package(yaml-cpp)
 find_package(yaml-cpp CONFIG REQUIRED)
