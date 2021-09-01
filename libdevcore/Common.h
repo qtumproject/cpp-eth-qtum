@@ -52,6 +52,7 @@ extern char const* Version;
 extern std::string const EmptyString;
 
 // Binary data types.
+using byte = uint8_t;
 using bytes = std::vector<byte>;
 using bytesRef = vector_ref<byte>;
 using bytesConstRef = vector_ref<byte const>;

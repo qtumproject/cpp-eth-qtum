@@ -31,12 +31,12 @@
 using namespace std;
 using namespace dev;
 
-static inline bool is_base64(byte c)
+static inline bool is_base64(dev::byte c)
 {
     return (isalnum(c) || (c == '+') || (c == '/'));
 }
 
-static inline byte find_base64_char_index(byte c)
+static inline dev::byte find_base64_char_index(dev::byte c)
 {
     if ('A' <= c && c <= 'Z') return c - 'A';
     else if ('a' <= c && c <= 'z') return c - 'a' + 1 + find_base64_char_index('Z');
@@ -51,8 +51,8 @@ string toBase64Encoding(bytesConstRef _in, char const* _base64_chars, bool _pad)
     string ret;
     int i = 0;
     int j = 0;
-    byte char_array_3[3];
-    byte char_array_4[4];
+    dev::byte char_array_3[3];
+    dev::byte char_array_4[4];
 
     auto buf = _in.data();
     auto bufLen = _in.size();
@@ -119,8 +119,8 @@ bytes dev::fromBase64(string const& encoded_string)
     int i = 0;
     int j = 0;
     int in_ = 0;
-    byte char_array_3[3];
-    byte char_array_4[4];
+    dev::byte char_array_3[3];
+    dev::byte char_array_4[4];
     bytes ret;
 
     while (in_len-- && encoded_string[in_] != '=' && is_base64(encoded_string[in_]))
