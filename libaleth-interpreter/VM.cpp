@@ -538,7 +538,11 @@ void VM::interpretCases()
         {
             intx::uint256 expon = m_SP[1];
             const int64_t byteCost = m_rev >= EVMC_SPURIOUS_DRAGON ? 50 : 10;
+#ifdef QTUM_BUILD
+            m_runGas = toInt63(VMSchedule::stepGas5 + byteCost * intx::count_significant_bytes(expon));
+#else
             m_runGas = toInt63(VMSchedule::stepGas5 + byteCost * intx::count_significant_words<uint8_t>(expon));
+#endif
             ON_OP();
             updateIOGas();
 
