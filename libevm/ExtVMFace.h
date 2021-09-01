@@ -312,6 +312,13 @@ public:
     void emit_log(const evmc::address& _addr, const uint8_t* _data, size_t _dataSize,
         const evmc::bytes32 _topics[], size_t _numTopics) noexcept override;
 
+#ifdef QTUM_BUILD
+    evmc_access_status access_account(const evmc::address& addr) noexcept final;
+
+    evmc_access_status access_storage(const evmc::address& addr,
+                                      const evmc::bytes32& key) noexcept final;
+#endif
+
 private:
     evmc::result create(evmc_message const& _msg) noexcept;
 

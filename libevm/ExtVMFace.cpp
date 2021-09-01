@@ -125,6 +125,22 @@ void EvmCHost::emit_log(evmc::address const& _addr, uint8_t const* _data, size_t
     m_extVM.log(h256s{pTopics, pTopics + _numTopics}, bytesConstRef{_data, _dataSize});
 }
 
+#ifdef QTUM_BUILD
+evmc_access_status EvmCHost::access_account(const evmc::address& addr) noexcept
+{
+    (void)addr;
+    return EVMC_ACCESS_COLD;
+}
+
+evmc_access_status EvmCHost::access_storage(const evmc::address& addr,
+                                  const evmc::bytes32& key) noexcept
+{
+    (void)addr;
+    (void)key;
+    return EVMC_ACCESS_COLD;
+}
+#endif
+
 evmc_tx_context EvmCHost::get_tx_context() const noexcept
 {
     evmc_tx_context result = {};
