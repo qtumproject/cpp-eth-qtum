@@ -13,3 +13,6 @@
 [submodule "scripts/dopple"]
 	path = scripts/dopple
 	url = https://github.com/ethereum/dopple
+[submodule "evmone"]
+	path = evmone
+	url = https://github.com/qtumproject/qtum-evmone
