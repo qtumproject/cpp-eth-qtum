@@ -9,6 +9,9 @@
 #include <libaleth-interpreter/interpreter.h>
 
 #include <evmc/loader.h>
+#ifdef QTUM_BUILD
+#include <evmone/evmone.h>
+#endif
 
 namespace po = boost::program_options;
 
@@ -21,7 +24,11 @@ namespace
 
 DEV_SIMPLE_EXCEPTION(VMKindNotSupported);
 
+#ifdef QTUM_BUILD
+auto g_kind = VMKind::Evmone;
+#else
 auto g_kind = VMKind::Legacy;
+#endif
 
 /// The pointer to EVMC create function in DLL EVMC VM.
 ///
@@ -51,6 +58,9 @@ struct VMKindTableEntry
 VMKindTableEntry vmKindsTable[] = {
     {VMKind::Interpreter, "interpreter"},
     {VMKind::Legacy, "legacy"},
+#ifdef QTUM_BUILD
+    {VMKind::Evmone, "evmone"},
+#endif
 };
 
 void setVMKind(const std::string& _name)
@@ -181,7 +191,10 @@ VMPtr VMFactory::create(VMKind _kind)
     {
     case VMKind::Interpreter:
         return {new EVMC{evmc_create_aleth_interpreter(), s_evmcOptions}, default_delete};
-#ifndef QTUM_BUILD
+#ifdef QTUM_BUILD
+    case VMKind::Evmone:
+        return {new EVMC{evmc_create_evmone(), s_evmcOptions}, default_delete};
+#else
     case VMKind::DLL:
         assert(g_evmcDll != nullptr);
         // Return "fake" owning pointer to global EVMC DLL VM.

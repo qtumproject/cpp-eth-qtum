@@ -15,7 +15,9 @@ enum class VMKind
 {
     Interpreter,
     Legacy,
-#ifndef QTUM_BUILD
+#ifdef QTUM_BUILD
+    Evmone
+#else
     DLL
 #endif
 };
