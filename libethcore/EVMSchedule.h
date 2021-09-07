@@ -28,6 +28,8 @@ struct EVMSchedule
     bool eip158Mode = false;
     bool eip1283Mode = false;
     bool eip2200Mode = false;
+    bool eip2929Mode = false;
+    bool eip1559Mode = false;
     bool haveBitwiseShifting = false;
     bool haveRevert = false;
     bool haveReturnData = false;
@@ -82,6 +84,7 @@ struct EVMSchedule
     bool zeroValueTransferChargesNewAccountGas() const { return !eip158Mode; }
     bool sstoreNetGasMetering() const { return eip1283Mode || eip2200Mode; }
     bool sstoreThrowsIfGasBelowCallStipend() const { return eip2200Mode; }
+    bool accessStatus() const { return eip2929Mode; }
 };
 
 static const EVMSchedule DefaultSchedule = EVMSchedule();
@@ -162,11 +165,28 @@ static const EVMSchedule& MuirGlacierSchedule = IstanbulSchedule;
 
 static const EVMSchedule BerlinSchedule = [] {
     EVMSchedule schedule = MuirGlacierSchedule;
+    schedule.eip2929Mode = true;
+
+    // Warm storage read cost
+    schedule.extcodesizeGas = 100;
+    schedule.extcodecopyGas = 100;
+    schedule.extcodehashGas = 100;
+    schedule.balanceGas = 100;
+    schedule.callGas = 100;
+    schedule.callSelfGas = 100;
+    schedule.precompileStaticCallGas = 100;
+    schedule.sloadGas = 100;
+    return schedule;
+}();
+
+static const EVMSchedule LondonSchedule = [] {
+    EVMSchedule schedule = BerlinSchedule;
+    schedule.eip1559Mode = true;
     return schedule;
 }();
 
 static const EVMSchedule ExperimentalSchedule = [] {
-    EVMSchedule schedule = BerlinSchedule;
+    EVMSchedule schedule = LondonSchedule;
     schedule.accountVersion = 1;
     schedule.blockhashGas = 800;
     return schedule;

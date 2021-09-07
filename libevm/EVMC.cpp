@@ -14,6 +14,12 @@ namespace
 {
 evmc_revision toRevision(EVMSchedule const& _schedule) noexcept
 {
+#ifdef QTUM_BUILD
+    if (_schedule.eip1559Mode)
+        return EVMC_LONDON;
+#endif
+    if (_schedule.eip2929Mode)
+        return EVMC_BERLIN;
     if (_schedule.haveChainID)
         return EVMC_ISTANBUL;
     if (_schedule.haveCreate2 && !_schedule.eip1283Mode)

@@ -52,6 +52,7 @@ string const c_constantinopleFixForkBlock = "constantinopleFixForkBlock";
 string const c_istanbulForkBlock = "istanbulForkBlock";
 string const c_muirGlacierForkBlock = "muirGlacierForkBlock";
 string const c_berlinForkBlock = "berlinForkBlock";
+string const c_londonForkBlock = "londonForkBlock";
 string const c_experimentalForkBlock = "experimentalForkBlock";
 string const c_accountStartNonce = "accountStartNonce";
 string const c_maximumExtraDataSize = "maximumExtraDataSize";

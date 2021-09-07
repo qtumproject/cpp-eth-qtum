@@ -96,6 +96,7 @@ public:
     u256 istanbulForkBlock = c_infiniteBlockNumber;
     u256 muirGlacierForkBlock = c_infiniteBlockNumber;
     u256 berlinForkBlock = c_infiniteBlockNumber;
+    u256 londonForkBlock = c_infiniteBlockNumber;
     u256 lastForkBlock = c_infiniteBlockNumber;
     u256 qip6ForkBlock = c_infiniteBlockNumber;
     AdditionalEIPs lastForkAdditionalEIPs;

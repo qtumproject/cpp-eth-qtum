@@ -51,6 +51,7 @@ extern std::string const c_constantinopleFixForkBlock;
 extern std::string const c_istanbulForkBlock;
 extern std::string const c_muirGlacierForkBlock;
 extern std::string const c_berlinForkBlock;
+extern std::string const c_londonForkBlock;
 extern std::string const c_experimentalForkBlock;
 extern std::string const c_accountStartNonce;
 extern std::string const c_maximumExtraDataSize;
