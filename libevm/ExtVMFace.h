@@ -19,6 +19,7 @@
 #include <boost/optional.hpp>
 #include <functional>
 #include <set>
+#include <map>
 
 namespace dev
 {
@@ -278,6 +279,36 @@ public:
     bool staticCall = false;  ///< Throw on state changing.
 };
 
+#ifdef QTUM_BUILD
+/// Extended value for account storage access status.
+struct access_value
+{
+    /// Is the storage key cold or warm.
+    evmc_access_status access_status{EVMC_ACCESS_COLD};
+
+    /// Default constructor.
+    access_value() noexcept = default;
+
+    /// Constructor with initial access status.
+    access_value(evmc_access_status _access_status) noexcept
+      : access_status{_access_status}
+    {}
+};
+
+/// Access account.
+struct AccessAccount
+{
+    /// Is the account key cold or warm.
+    evmc_access_status access_status{EVMC_ACCESS_COLD};
+
+    /// The account storage map.
+    std::map<evmc::bytes32, access_value> storage;
+
+    /// Default constructor.
+    AccessAccount() noexcept = default;
+};
+#endif
+
 class EvmCHost : public evmc::Host
 {
 public:
@@ -321,9 +352,15 @@ public:
 
 private:
     evmc::result create(evmc_message const& _msg) noexcept;
+    void record_account_access(const evmc::address& addr) const;
 
 private:
     ExtVMFace& m_extVM;
+
+#ifdef QTUM_BUILD
+    /// The set of all accounts in the Host, organized by their addresses.
+    mutable std::map<evmc::address, AccessAccount> accounts;
+#endif
 };
 
 inline evmc::address toEvmC(Address const& _addr)

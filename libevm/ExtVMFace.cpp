@@ -5,6 +5,7 @@
 #include "ExtVMFace.h"
 
 #include <evmc/helpers.h>
+using namespace evmc;
 
 namespace dev
 {
@@ -17,22 +18,23 @@ static_assert(alignof(h256) == alignof(evmc_uint256be), "Hash types alignment mi
 
 bool EvmCHost::account_exists(evmc::address const& _addr) const noexcept
 {
+    record_account_access(_addr);
     return m_extVM.exists(fromEvmC(_addr));
 }
 
 evmc::bytes32 EvmCHost::get_storage(evmc::address const& _addr, evmc::bytes32 const& _key) const
     noexcept
 {
-    (void)_addr;
     assert(fromEvmC(_addr) == m_extVM.myAddress);
+    record_account_access(_addr);
     return toEvmC(m_extVM.store(fromEvmC(_key)));
 }
 
 evmc_storage_status EvmCHost::set_storage(
     evmc::address const& _addr, evmc::bytes32 const& _key, evmc::bytes32 const& _value) noexcept
 {
-    (void)_addr;
     assert(fromEvmC(_addr) == m_extVM.myAddress);
+    record_account_access(_addr);
     u256 const index = fromEvmC(_key);
     u256 const newValue = fromEvmC(_value);
     u256 const currentValue = m_extVM.store(index);
@@ -79,22 +81,26 @@ evmc_storage_status EvmCHost::set_storage(
 
 evmc::uint256be EvmCHost::get_balance(evmc::address const& _addr) const noexcept
 {
+    record_account_access(_addr);
     return toEvmC(m_extVM.balance(fromEvmC(_addr)));
 }
 
 size_t EvmCHost::get_code_size(evmc::address const& _addr) const noexcept
 {
+    record_account_access(_addr);
     return m_extVM.codeSizeAt(fromEvmC(_addr));
 }
 
 evmc::bytes32 EvmCHost::get_code_hash(evmc::address const& _addr) const noexcept
 {
+    record_account_access(_addr);
     return toEvmC(m_extVM.codeHashAt(fromEvmC(_addr)));
 }
 
 size_t EvmCHost::copy_code(evmc::address const& _addr, size_t _codeOffset, byte* _bufferData,
     size_t _bufferSize) const noexcept
 {
+    record_account_access(_addr);
     Address addr = fromEvmC(_addr);
     bytes const& c = m_extVM.codeAt(addr);
 
@@ -110,8 +116,8 @@ size_t EvmCHost::copy_code(evmc::address const& _addr, size_t _codeOffset, byte*
 
 void EvmCHost::selfdestruct(evmc::address const& _addr, evmc::address const& _beneficiary) noexcept
 {
-    (void)_addr;
     assert(fromEvmC(_addr) == m_extVM.myAddress);
+    record_account_access(_addr);
     m_extVM.selfdestruct(fromEvmC(_beneficiary));
 }
 
@@ -128,18 +134,41 @@ void EvmCHost::emit_log(evmc::address const& _addr, uint8_t const* _data, size_t
 #ifdef QTUM_BUILD
 evmc_access_status EvmCHost::access_account(const evmc::address& addr) noexcept
 {
-    (void)addr;
-    return EVMC_ACCESS_COLD;
+    // Check if the address have been already accessed.
+    const auto already_accessed = accounts[addr].access_status;
+
+    record_account_access(addr);
+
+    // Accessing precompiled contracts is always warm.
+    if ((addr >= 0x0000000000000000000000000000000000000001_address &&
+         addr <= 0x0000000000000000000000000000000000000009_address) || 
+        (addr >= 0x0000000000000000000000000000000000000080_address &&
+         addr <= 0x0000000000000000000000000000000000000086_address))
+        return EVMC_ACCESS_WARM;
+
+    return already_accessed;
 }
 
 evmc_access_status EvmCHost::access_storage(const evmc::address& addr,
                                   const evmc::bytes32& key) noexcept
 {
-    (void)addr;
-    (void)key;
-    return EVMC_ACCESS_COLD;
+    auto& value = accounts[addr].storage[key];
+    const auto access_status = value.access_status;
+    value.access_status = EVMC_ACCESS_WARM;
+    return access_status;
 }
 #endif
+
+void EvmCHost::record_account_access(const evmc::address& addr) const
+{
+#ifdef QTUM_BUILD
+    EVMSchedule const& schedule = m_extVM.evmSchedule();
+    if(schedule.accessStatus())
+        accounts[addr].access_status = EVMC_ACCESS_WARM;
+#else
+    (void)addr;
+#endif
+}
 
 evmc_tx_context EvmCHost::get_tx_context() const noexcept
 {
@@ -210,6 +239,8 @@ evmc::result EvmCHost::call(evmc_message const& _msg) noexcept
 {
     assert(_msg.gas >= 0 && "Invalid gas value");
     assert(_msg.depth == static_cast<int>(m_extVM.depth) + 1);
+
+    record_account_access(_msg.destination);
 
     // Handle CREATE separately.
     if (_msg.kind == EVMC_CREATE || _msg.kind == EVMC_CREATE2)
