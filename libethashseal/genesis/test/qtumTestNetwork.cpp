@@ -32,6 +32,8 @@ R"E(
 		"istanbulForkBlock": "0xffffffffffffffffff",
 		"muirGlacierForkBlock": "0xffffffffffffffffff",
 		"qip6ForkBlock": "0xffffffffffffffffff",
+		"berlinForkBlock": "0xffffffffffffffffff",
+		"londonForkBlock": "0xffffffffffffffffff",
 		"networkID" : "0x01",
 		"chainID": "0x01",
 		"maximumExtraDataSize": "0x20",

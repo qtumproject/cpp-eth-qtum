@@ -33,6 +33,8 @@ R"E(
 		"istanbulForkBlock": "MUIR_STARTING_BLOCK",
 		"muirGlacierForkBlock": "MUIR_STARTING_BLOCK",
 		"qip6ForkBlock": "QIP6_STARTING_BLOCK",
+		"berlinForkBlock": "LONDON_STARTING_BLOCK",
+		"londonForkBlock": "LONDON_STARTING_BLOCK",
 		"networkID" : "0x51",
 		"chainID": "0x51",
 		"maximumExtraDataSize": "0x20",
